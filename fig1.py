@@ -172,7 +172,7 @@ def lick_raster_plot(ax, lick, show_reward=1, show_firstLick=0, title='', xlm=[0
 def sup_perf_plot(ax, perf, title='', yn=1, xlm=[-0.3, 1.3]):
     r = perf['u_sem']
     u, sem = r[:, :, 0].mean(0), r[:, :, 0].std(0, ddof=1)/np.sqrt(r.shape[0])
-    ax.plot([0, 1], r[:, :, 0].T, 'k-', lw=1, alpha=0.5)
+    ax.plot([0, 1], r[:, :, 0].T, 'k-', lw=0.5, alpha=0.5)
     ax.plot([0, 1], u, 'k-', lw=2)
     ax.errorbar(0, u[0], yerr=sem[0], marker='s', markersize=3, color='r')
     ax.errorbar(1, u[1], yerr=sem[1], marker='s', markersize=3, color='b')
