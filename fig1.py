@@ -22,21 +22,21 @@ def load_fig1_dat(root = r'D:\Results\Zhong-et-al-2025'):
     dat['mean_beh_aft'] = utils.get_mean_lick_response(beh1, lick_typ='befRew') 
     
     # load distribution map of stimulus selective neurons
-    fns = ['sup_train1_before_learning_dprime_distribution.npy',
-            'sup_train1_after_learning_dprime_distribution.npy',
-            'unsup_train1_before_learning_dprime_distribution.npy',
-            'unsup_train1_after_learning_dprime_distribution.npy']
+    fns = ['sup_train1_before_learning_leaf1_circle1_dprime_distribution.npy',
+            'sup_train1_after_learning_leaf1_circle1_dprime_distribution.npy',
+            'unsup_train1_before_learning_leaf1_circle1_dprime_distribution.npy',
+            'unsup_train1_after_learning_leaf1_circle1_dprime_distribution.npy']
     dat['img'] = [np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item() for fn in fns]
     dat['outlines'] = np.load(os.path.join(root, 'retinotopy/areas.npz'), allow_pickle = True)['out']
     dat['hotcmp'] = make_hot_cmap() 
     
     # load selective neurons fraction
-    fns = ['sup_train1_before_learning_dprime_frac.npy',
-          'sup_train1_after_learning_dprime_frac.npy',
-          'unsup_train1_before_learning_dprime_frac.npy',
-          'unsup_train1_after_learning_dprime_frac.npy',
-          'train1_before_grating_dprime_frac.npy',
-          'train1_after_grating_dprime_frac.npy']
+    fns = ['sup_train1_before_learning_leaf1_circle1_dprime_frac.npy',
+          'sup_train1_after_learning_leaf1_circle1_dprime_frac.npy',
+          'unsup_train1_before_learning_leaf1_circle1_dprime_frac.npy',
+          'unsup_train1_after_learning_leaf1_circle1_dprime_frac.npy',
+          'train1_before_grating_leaf1_circle1_dprime_frac.npy',
+          'train1_after_grating_leaf1_circle1_dprime_frac.npy']
     dat['frac'] = [np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item() for fn in fns]    
     return dat
 
@@ -105,14 +105,14 @@ def plot_fig1(dat, root):
     distribution_map(axes_sup[0], dat['img'][0]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
     axes_sup[0].text(0.35, 0.85, 'task mice\nbefore learning', transform=axes_sup[0].transAxes)
 
-    distribution_map(axes_sup[1], dat['img'][0]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
+    distribution_map(axes_sup[1], dat['img'][1]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
     axes_sup[1].text(0.35, 0.85, 'task mice\nafter learning', transform=axes_sup[1].transAxes)
 
-    distribution_map(axes_unsup[0], dat['img'][0]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=1)
+    distribution_map(axes_unsup[0], dat['img'][2]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=1)
     axes_unsup[0].text(0.35, 0.85, 'unsupervised\nbefore learning', transform=axes_unsup[0].transAxes)
     axes_unsup[0].text(0.07, -0.01, '1 mm', transform=axes_unsup[0].transAxes)
 
-    distribution_map(axes_unsup[1], dat['img'][0]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
+    distribution_map(axes_unsup[1], dat['img'][3]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
     axes_unsup[1].text(0.35, 0.85, 'unsupervised\nafter learning', transform=axes_unsup[1].transAxes)
 
     cbar2 = fig.add_axes([x+dx+w*0.85,y+0.02,0.006,0.06])

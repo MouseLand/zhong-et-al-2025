@@ -18,11 +18,8 @@ def load_fig2_dat(root = r'D:\Results\Zhong-et-al-2025'):
     dat['sort_spk'] = np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item() 
     return dat
 
-def plot_fig1(dat, root):
+def plot_fig2(dat, root):
     fig = plt.figure(figsize=(7, 4.33),dpi=500)
-    ax_text = fig.add_axes([0,0.18,1,0.82])
-    ax_text.set_facecolor('None')
-    ax_text.axis('off')
     plt.rcParams["font.family"] = "arial"
     plt.rcParams["font.size"] = 5   
     
@@ -252,8 +249,9 @@ def example_mHV_coding_direction(ax, root):
         
 def mHV_mean_cd_proj(ax, root):
     fn = 'sup_test1_coding_direction.npy'
-    cd_proj = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_pos_mean'][:, 1, :4] # take medial area
-    cd_proj = cd_proj[:, [0, 1, 3, 2]]
+    cd_proj = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_tr_mean'][:, 1, :4] # take medial area
+    cd_proj = cd_proj[:, [0, 1, 3, 2]].astype(float)
+    print(cd_proj.shape)
     u, sem = np.nanmean(cd_proj, 0), np.nanstd(cd_proj, 0, ddof=1)/np.sqrt(cd_proj.shape[0])
     ax.plot(cd_proj.T, 'k-', lw=0.5, alpha=0.5)
     ax.plot(u, lw=1.2, color='k')
@@ -267,14 +265,17 @@ def mHV_mean_cd_proj(ax, root):
         label.set_color(color)   
         
 def SI_test1(ax, root):
-    fns = ['sup_test1_coding_direction.npy', 'unsup_test1_coding_direction.npy', 'naive_test1_coding_direction.npy']
-    cols = ['g', [0.46,0, 0.23], 'k']
+    fns = ['naive_test1_coding_direction.npy', 'sup_test1_coding_direction.npy', 'unsup_test1_coding_direction.npy']
+    cols = ['k', 'g', [0.46,0, 0.23]]
     for f,fn in enumerate(fns):
-        cd_proj = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_pos_mean'][:, :, :4] # take medial area
-        cd_proj = cd_proj[:, :, [0, 1, 3, 2]]
-        dx = cd_proj[:, :, 1:3]-cd_proj[:, :, 0:1]
-        dy = cd_proj[:, :, 3:4]-cd_proj[:, :, 1:3]
-        SI = (dx-dy) / (dx+dy)
+        cd_proj = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_tr_mean'][:, :, :4] # take medial area
+        cd_proj = cd_proj[:, :, [0, 1, 3, 2]].astype(float)
+#         dx = cd_proj[:, :, 1:3]-cd_proj[:, :, 0:1]
+#         dy = cd_proj[:, :, 3:4]-cd_proj[:, :, 1:3]
+        dx = abs(cd_proj[:, :, 1:3]-cd_proj[:, :, 0:1])
+        dy = abs(cd_proj[:, :, 3:4]-cd_proj[:, :, 1:3])
+        dxy = cd_proj[:, :, 3:4]-cd_proj[:, :, 0:1]
+        SI = (dx-dy) / dxy
         u, sem = np.nanmean(SI, 0), np.nanstd(SI, 0, ddof=1)/np.sqrt(SI.shape[0])
         for a in range(4):
             ax.plot(np.array([0, 0.5])+a, u[a], lw=1.2, color=cols[f])
