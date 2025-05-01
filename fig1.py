@@ -10,8 +10,7 @@ import utils
 def load_fig1_dat(root = r'D:\Results\Zhong-et-al-2025'):
     dat = {}
     # load example lick raster
-    beh_path = os.path.join(root, 'beh')
-    example_behavior = np.load(os.path.join(beh_path, 'example_bef_and_aft_learning_behavior.npy'), allow_pickle=1).item()
+    example_behavior = np.load(os.path.join(root, 'beh\example_bef_and_aft_learning_behavior.npy'), allow_pickle=1).item()
     dat['aftLearn_lick_raster'] = utils.get_lick_raster(example_behavior['TX109_2023_04_14_1'])
 
     # load before learning performance

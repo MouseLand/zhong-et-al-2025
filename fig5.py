@@ -120,7 +120,7 @@ def plot_frac(ax, frac1, frac2, col='k', alpha=0.3, mk='s',lw0=0.7, lw1=2, elw=2
     ax.errorbar(np.arange(4), u[0, :], yerr=sem[0, :], marker='s', markersize=3, color=col, ls='None')
     ax.errorbar(np.arange(4)+0.5, u[1, :], yerr=sem[1, :], marker='s', markersize=3, color=col, ls='None')  
     utils.fmt(ax, ylm=[0, 0.25], xtick=[np.arange(8)/2, ['before\nlearning', 'after\nlearning', None, None, None, None, None, None]],
-             ylabel="% neurons with $d'_{late vs. early} \geq 0.3$", ytick=[[0, 0.1, 0.2], [0, 10, 20]])
+             ylabel=r"% neurons with $d'_{late vs. early} \geq 0.3$", ytick=[[0, 0.1, 0.2], [0, 10, 20]])
     
 def plot_rewPred_neu_frac(ax, root, xlm=[]):
     # load reward neurons fractions

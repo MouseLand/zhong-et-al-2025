@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import os
 from scipy import interpolate
 from scipy import stats
+import random
 
 def color_codes():
     cols = {}
@@ -18,12 +19,12 @@ def color_codes():
     cols['circle2'] = 'm'
     return cols
 
-def fmt(ax=None, xtick=None, ytick=None, title=None, xlabel=None, ylabel=None, boxoff=1,  ypad=1, xpad=1, tpad=None,
-          axis_off='on', xlm=None, ylm=None, aspect='auto', tcolor='k', ticklen=1.5, tickwid=0.5, y_invert=0):
+def fmt(ax=None, xtick=None, ytick=None, title=None, xlabel=None, ylabel=None, boxoff=1,  ypad=1, xpad=1, tpad=None,tickpad=1,
+          axis_off='on', xlm=None, ylm=None, aspect='auto', tcolor='k', ticklen=1.5, tickwid=0.5, y_invert=0, xrot=0):
     ax = plt.gca() if ax==None else ax     
     plt.sca(ax)
     if xtick != None:
-        plt.xticks(ticks=xtick[0], labels=xtick[1]) if len(xtick)>1 else plt.xticks(ticks=xtick[0], rotation = xrot)
+        plt.xticks(ticks=xtick[0], labels=xtick[1], rotation = xrot) if len(xtick)>1 else plt.xticks(ticks=xtick[0], rotation = xrot)
     if ytick != None:
         plt.yticks(ticks=ytick[0], labels=ytick[1]) if len(ytick)>1 else plt.yticks(ticks=ytick[0])              
     if xlabel!=None:
@@ -31,7 +32,7 @@ def fmt(ax=None, xtick=None, ytick=None, title=None, xlabel=None, ylabel=None, b
     if ylabel!=None:
         plt.ylabel(ylabel, labelpad=ypad)
     plt.title(title, color=tcolor, pad=tpad)
-    ax.tick_params(axis='both', which='major', length=ticklen, width=tickwid)
+    ax.tick_params(axis='both', which='major', length=ticklen, width=tickwid, pad=tickpad)
     if boxoff == 1:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)       
@@ -85,6 +86,18 @@ def find_between(x, xmin, xmax):
     '''find x >= xmin and <= xmax'''
     return (x>=xmin) & (x<=xmax)
 
+def get_cat_id(WallName, isRew):
+    uniqW = np.unique(WallName)
+    rewStim = WallName[isRew][0]
+    cid = np.zeros(len(uniqW))
+    cid[uniqW==rewStim] = 2
+    if rewStim[-1]=='1':
+        cid[uniqW==rewStim[:-1]+'2'] = 3
+    nrewStim = uniqW[cid==0][0]
+    if nrewStim[-1]=='1':
+        cid[uniqW==nrewStim[:-1]+'2'] = 1
+    return cid.astype(int)
+
 def get_lick_raster(dat):
     SoundPos = dat['SoundPos']
     LickPos = np.array([dat['LickPos'][dat['LickTrind']==n] for n in range(dat['ntrials'])], dtype=object) 
@@ -121,27 +134,58 @@ def get_lick_raster(dat):
             LickRaster[typ][tw]['isRew'] = any(isRew[ind])
     return LickRaster
 
+def pretrain_exp_lick_raster(dat):
+    LickPos = np.array([dat['LickPos'][dat['LickTrind']==n] for n in range(dat['ntrials'])], dtype=object) 
+    WallType = dat['WallType']
+    WallName = dat['WallName']
+    UniqWalls = dat['UniqWalls']
+    rew_id = get_cat_id(WallName, dat['isRew'])  
+    LickRaster = {'firstLick':[] , 'LickPos':[], 'ntrials':np.empty(2)}
+    for i, ind in enumerate([2, 0]): # 1: category 1; 2: category 2
+        idx = WallName==UniqWalls[rew_id==ind]
+        LickRaster['ntrials'][i] = idx.sum()
+        temp_lick = LickPos[idx].reshape((1,-1)) if LickPos.ndim<1 else LickPos[idx]
+        LPos,LTr,FLPos,FLTr = np.empty(0),np.empty(0), [], []
+        for n in range(len(temp_lick)):
+            LPos = np.concatenate((LPos, temp_lick[n]))
+            LTr = np.concatenate((LTr, n * np.ones(len(temp_lick[n]))))  
+            if len(temp_lick[n])>0:
+                FLPos.append(temp_lick[n][0])
+                FLTr.append(n)
+
+        LickRaster['LickPos'].append([LPos, LTr])
+        LickRaster['firstLick'].append([np.array(FLPos), np.array(FLTr)]) 
+    return LickRaster
+
+def get_first_lick_distribution(dat):
+    hist = []
+    for ky in dat.keys():
+        FL = pretrain_exp_lick_raster(dat[ky])['firstLick'][0][0]
+        count,_ = np.histogram(FL, range=[0,40], bins=40)
+        hist.append(count/len(FL))
+    hist = np.array(hist)
+    return hist.reshape(int(hist.shape[0]/5), 5, 40)
 
 def lickCount(dats, def_range=[]):
-	"""return binary lick response for each trial"""
-	befRew, aftRew, inRange = [], [], []
-	for n in range(dats['ntrials']):
-	    RewTime, SoundTime = dats['RewTime'], dats['SoundTime']
-	    cue_del = SoundTime + dats['Reward_Delay_ms']/(1000*3600*24) # convert to datenum 
-	    if dats['Reward_Mode']=='Passive':
-	        befRew.append(find_between(dats['LickTime'],dats['Trial_start_time'][n],cue_del[n]))
-	    elif dats['Reward_Mode']=='Active after cue':
-	        befRew.append(find_between(dats['LickTime'],dats['Trial_start_time'][n],dats['Gray_space_time'][n]))
-	    aftRew.append(find_between(dats['LickTime'],RewTime[n],dats['Gray_space_time'][n]))
-	    if len(def_range)==2:
-	        inRange.append(find_between(dats['LickPos'], def_range[0], def_range[1]) & (dats['LickTrind']==n))
-	    else:
-	        inRange.append([np.nan])
+    """return binary lick response for each trial"""
+    befRew, aftRew, inRange = [], [], []
+    for n in range(dats['ntrials']):
+        RewTime, SoundTime = dats['RewTime'], dats['SoundTime']
+        cue_del = SoundTime + dats['Reward_Delay_ms']/(1000*3600*24) # convert to datenum 
+        if dats['Reward_Mode']=='Passive':
+            befRew.append(find_between(dats['LickTime'],dats['Trial_start_time'][n],cue_del[n]))
+        elif dats['Reward_Mode']=='Active after cue':
+            befRew.append(find_between(dats['LickTime'],dats['Trial_start_time'][n],dats['Gray_space_time'][n]))
+        aftRew.append(find_between(dats['LickTime'],RewTime[n],dats['Gray_space_time'][n]))
+        if len(def_range)==2:
+            inRange.append(find_between(dats['LickPos'], def_range[0], def_range[1]) & (dats['LickTrind']==n))
+        else:
+            inRange.append([np.nan])
 
-	lickResp = {'befRew':np.array(befRew).sum(1)>0,
-	            'aftRew':np.array(aftRew).sum(1)>0,
-	            'inRange':np.array(inRange).sum(1)>0}    
-	return lickResp
+    lickResp = {'befRew':np.array(befRew).sum(1)>0,
+                'aftRew':np.array(aftRew).sum(1)>0,
+                'inRange':np.array(inRange).sum(1)>0}    
+    return lickResp
 
 def lick_response(dats, trial_include=[], def_range=[]):
     lickResp= lickCount(dats, def_range=def_range)
@@ -185,6 +229,38 @@ def get_mean_lick_response(beh, lick_typ='befRew'):
     out['stimuli'] = stimuli[stim_idx]
     return out    
 
+def get_lick_response_in_zone(beh):
+    """This is for behavior mice only, only consider licking inside reward zone (2-4m) """
+    N = len(beh.keys())
+    perf = np.empty((N, 2))
+    ntrials = np.empty(N)
+    for k, ky in enumerate(beh.keys()):
+        ntrials[k] = beh[ky]['ntrials']
+        lickResp = lickCount(beh[ky], def_range=[20, 40])['inRange']
+        WallName = beh[ky]['WallName']
+        UniqWalls = beh[ky]['UniqWalls']
+        rew_id = get_cat_id(WallName, beh[ky]['isRew'])
+        for i, istim in enumerate([2, 0]): # 2: reward stimulus;  0: non-rew stimulus
+            idx = WallName==UniqWalls[rew_id==istim]
+            idx[200:] = False # only include the first 200 trials
+            perf[k, i] = np.mean(lickResp[idx])
+    return perf.reshape(int(N/5), 5, 2), ntrials.reshape(int(N/5), 5)
+
+def get_test3_mean_lick_response(beh, lick_typ='befRew'):
+    """lick_typ: befRew, aftRew or inRange"""
+    out = {'mname':list(beh.keys())}
+    n = len(out['mname'])
+    temp = np.empty((n, 4, 2)) # mice, stimuli, [u, sem];
+    stimuli = np.array(['circle1', 'leaf1', 'leaf1_swap', 'leaf2'])
+    for k, ky in enumerate(out['mname']):
+        lickResp = lick_response(beh[ky])
+        for istim in range(4):
+            stim = lickResp['tex_name'][istim]
+            temp[k, istim] = lickResp[stim][lick_typ]
+    out['u_sem'] = temp
+    out['stimuli'] = stimuli
+    return out  
+
 def neu_area_ID(iarea):
     area_name = ['V1', 'mHV', 'lHV', 'aHV']
     idx = {}
@@ -198,6 +274,10 @@ def neu_area_ID(iarea):
         elif ar=='aHV':
             idx[ar] = (iarea==3) | (iarea==4)     
     return idx
+
+def load_exp_beh(root, exp_type):
+    Beh = np.load(os.path.join(root, 'beh', 'Beh_'+ exp_type+ '.npy'), allow_pickle=1).item()
+    return Beh
 
 def load_retino(db, root = ''):
     """return: dtrans, areasN, ix, ix_area"""
@@ -219,21 +299,20 @@ def load_interp_spk(db, root=''):
     return spk
 
 def load_coding_direction(root, fn):
-    dat = np.load(os.path.join(root, fn), allow_pickle=1).item() 
-    print(dat['notes'])   
+    dat = np.load(os.path.join(root, fn), allow_pickle=1).item()  
     resp1 = dat['proj_2_stim1']
     resp2 = dat['proj_2_stim2']
     resp_diff = np.empty((len(resp1.keys()), 4, 7), dtype=object)
-    resp_diff_u = np.empty((len(resp1.keys()), 4, 7, dat['pos_length']), dtype=object)
+    resp_diff_tr = np.empty((len(resp1.keys()), 4, 7), dtype=object)
+    resp_diff_trMean = np.empty((len(resp1.keys()), 4, 7), dtype=object)
     resp_diff_corr_u = np.empty((len(resp1.keys()), 4, 7), dtype=object)
     for m, mname in enumerate(resp1.keys()):
         for a, arn in enumerate(resp1[mname].keys()):
             resp_diff[m, a] = np.array(resp1[mname][arn], dtype=object) - np.array(resp2[mname][arn], dtype=object)
             for s in range(7):
-                resp_diff_u[m, a, s] = resp_diff[m, a, s].mean(0)
-                resp_diff_corr_u[m, a, s] = resp_diff_u[m, a, s, dat['pos_from_prev']:dat['pos_from_prev']+40].mean(-1)    
-    out = {'proj_single_trials':resp_diff, 'proj_tr_mean':resp_diff_u.astype(float), 'proj_pos_mean':resp_diff_corr_u.astype(float),
-    		'notes':dat['notes'], 'stim_ref':dat['stim_ref'], 'pos_from_prev':dat['pos_from_prev']}
+                resp_diff_tr[m, a, s] = resp_diff[m, a, s][:, dat['pos_from_prev']:dat['pos_from_prev']+40].mean(1)
+                resp_diff_trMean[m, a, s] = resp_diff_tr[m, a, s].mean()
+    out = {'proj_single_trials':resp_diff, 'proj_tr':resp_diff_tr, 'proj_tr_mean':resp_diff_trMean, 'notes':dat['notes'], 'stim_ref':dat['stim_ref'], 'pos_from_prev':dat['pos_from_prev']}    
     return out    
 
 def load_example_stimSelNeu(root, fn='TX108_2023_03_22_1_stimSelNeu_sorted.npy'):
@@ -242,8 +321,8 @@ def load_example_stimSelNeu(root, fn='TX108_2023_03_22_1_stimSelNeu_sorted.npy')
 
 def dprime(x1, x2):
     """x1,x2: neurons * frames """
-    u1, u2 = np.nanmean(x1,1), np.nanmean(x2,1)
-    sig1, sig2 = np.nanstd(x1,1), np.nanstd(x2,1)
+    u1, u2 = np.nanmean(x1, 1), np.nanmean(x2, 1)
+    sig1, sig2 = np.nanstd(x1, 1), np.nanstd(x2, 1)
     return 2 * (u1 - u2) / (sig1 + sig2)      
 
 def get_dist_img(xpos, ypos, sel_idx=None, sig=30, sig_bg=30, xoff=800, yoff=800):
@@ -263,41 +342,6 @@ def get_dist_img(xpos, ypos, sel_idx=None, sig=30, sig_bg=30, xoff=800, yoff=800
     img[np.isnan(bg)] = np.nan
     img = np.fliplr(img)
     return img    
-
-# def Get_density_map(dprime, retinotopy, dp_thr=0.3):
-#     xoff, yoff =800,800   
-#     img_both, img_stim1, img_stim2 = [], [], []
-#     nmice = len(dprime)
-#     for i in range(nmice):   
-#         ixy, arid = retinotopy[i]['xy_t'], retinotopy[i]['iarea']
-#         dp = dprime[i]
-#         idx_both = abs(dp) >= dp_thr # both 
-#         idx_stim1 = dp >= dp_thr # only stim1
-#         idx_stim2 = dp <= -dp_thr # only stim2
-#         idx_neu = (arid!=-1) & (arid != 7)
-#         nneu = idx_neu.sum() # total neurons
-
-#         xpos, ypos = -ixy[idx_neu, 1], ixy[idx_neu, 0]
-
-#         img0 = get_dist_img(xpos, ypos, idx_both[idx_neu], xoff=xoff, yoff=yoff)
-#         img_both.append(img0/nneu) # devided by total neurons
-
-#         img1 = get_dist_img(xpos, ypos,idx_stim1[idx_neu], xoff=xoff, yoff=yoff)
-#         img_stim1.append(img1/nneu) 
-
-#         img2 = get_dist_img(xpos, ypos, idx_stim2[idx_neu], xoff=xoff, yoff=yoff)
-#         img_stim2.append(img2/nneu)     
-#     img_both = np.nanmean(np.array(img_both),axis=0) # mean across mice
-#     img_stim1 = np.nanmean(np.array(img_stim1),axis=0)
-#     img_stim2 = np.nanmean(np.array(img_stim2),axis=0)
-    
-#     n_down = 10 # down sample ratio
-#     imgs = {}
-#     imgs['both'] = img_both[::n_down,::n_down]
-#     imgs['stim1'] = img_stim1[::n_down,::n_down]
-#     imgs['stim2'] = img_stim2[::n_down,::n_down]
-#     imgs['n_down'] = n_down    
-#     return imgs  
 
 def Get_density_map(dprime, retinotopy, dp_thr=0.3, typ='both', n_down = 10):
     """dp_thr: threshold,
@@ -369,9 +413,10 @@ def Get_dprime_rewPred_neuron(db, Beh, stim_dp, root='', load_save_interp_spk=1,
     frac = {}
     frac['value'] = np.empty((4, len(db)))
     frac['mname'] = []
-    frac['dp_thr'] = dp_thrs
+    frac['dp_thr'] = dp_thr
     frac['rew_neurons'] = []
     frac['Notes'] = "['V1','mHV','lHV','aHV'] * mice * n_thr"
+    dp = []
     for n, ndb in enumerate(db):
         kn = '%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'])
         beh = Beh[kn]
@@ -400,10 +445,12 @@ def Get_dprime_rewPred_neuron(db, Beh, stim_dp, root='', load_save_interp_spk=1,
                           u_spk[:,(SoundPos<=SoundPos.mean()) & stim_tr]) # early vs late cue trials 
         idx1 = (dp1>=dp_thr) & sel_ind
         for a,ar in enumerate(['V1', 'mHV', 'lHV', 'aHV']):
-            frac['value'][a, n, t] =  np.sum(idx1 & areaID[ar])/areaID[ar].sum()
+            frac['value'][a, n] =  np.sum(idx1 & areaID[ar])/areaID[ar].sum()
         frac['mname'].append(ndb['mname'])
         frac['rew_neurons'].append(idx1)
-    return frac    
+        dp.append(dp1)
+    imgs = Get_density_map(dp, stim_dp['retinotopy'], dp_thr=dp_thr, typ='stim1', n_down = 10)
+    return frac, imgs    
 
 def Get_coding_direction(db, Beh, stim_ref=[2, 0], prc=5, root='', 
                             load_save_interp_spk=1, interp_spk_path='', n_bef = 10):
@@ -462,9 +509,9 @@ def Get_coding_direction(db, Beh, stim_ref=[2, 0], prc=5, root='',
         stim2_tr = WallN==uniqW[stim_id==stim_ref[1]][0] # stim2 trials
 
         corr_spk = interp_spk[:, :, :40].copy() # get activity in the texture area 
-        u0 = interp_spk[:,:,42:52].reshape((nneu, -1)).mean(1,keepdims=1) # mean activity in gray space    
-        stim1_std = corr_spk[:, stim1_tr].reshape((nneu, -1)).std(1,keepdims=1) # std for stim1
-        stim2_std = corr_spk[:, stim2_tr].reshape((nneu, -1)).std(1,keepdims=1) # std for stim2    
+        u0 = interp_spk[:,:,42:52].reshape((nneu, -1)).mean(1, keepdims=1) # mean activity in gray space    
+        stim1_std = corr_spk[:, stim1_tr].reshape((nneu, -1)).std(1, keepdims=1) # std for stim1
+        stim2_std = corr_spk[:, stim2_tr].reshape((nneu, -1)).std(1, keepdims=1) # std for stim2    
         # center to gray space, normalized by std of stim1 and stim2 
         spk_norm = (2 * (spk_resh - u0) / (stim1_std + stim2_std)).reshape(interp_spk.shape)
         # append activity from gray space of the previous trial 
@@ -522,7 +569,10 @@ def Get_sort_spk(db, Beh, stim_ref=[2, 0], prc=5, root='', load_save_interp_spk=
         spk = load_spk(ndb, root=os.path.join(root, 'spk'))
         nneu, nfr = spk.shape         
         # load behavior
-        kn = '%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'])
+        if 'stimtype' in ndb.keys():
+            kn = '%s_%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'], ndb['stimtype'])
+        else:
+            kn = '%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'])
         beh = Beh[kn]
         ntrials, uniqW, WallN, stim_id = beh['ntrials'], beh['UniqWalls'], beh['WallName'], beh['stim_id']
         CL = beh['Corridor_Length']
@@ -675,3 +725,176 @@ def get_stimNeu_and_sorted(db, beh, stim_ref=[2, 0], thr=0.3, root='', load_save
     
     all_dat = {'single_neu':single_neu, 'population':population, 'stim1_neu_sortID':stim1_neu_sortID, 'stim2_neu_sortID':stim2_neu_sortID, 'Note':'%s_%s'%(db['mname'], db['datexp'])}
     return all_dat     
+
+def get_seq_corr(dat, stim_sort='leaf1'):
+    mname = list(dat['spk_sort'].keys())
+    arn = dat['spk_sort'][mname[0]].keys()
+    r = np.empty((len(mname), len(arn), 7))
+    for m, mn in enumerate(mname):
+        for a, ar in enumerate(arn):
+            targ_pos = dat['spk_sort'][mn][ar]['sorted_by_odd_%s'%(stim_sort)]['target_maxPos']
+            ref_pos = dat['spk_sort'][mn][ar]['sorted_by_odd_%s'%(stim_sort)]['reference_maxPos']  
+            for s in range(7): # looping stimuli
+                r[m, a, s] = np.corrcoef(ref_pos, targ_pos[s])[0, 1] 
+    return r   
+
+def get_swap_seq_corr(dat, stim_sort='leaf1'):
+    mname = list(dat['spk_sort'].keys())
+    arn = dat['spk_sort'][mname[0]].keys()
+    r = np.empty((len(mname), len(arn), 2))
+    for m, mn in enumerate(mname):
+        for a, ar in enumerate(arn):
+            seq_spk = dat['spk_sort'][mn][ar]['sorted_by_odd_%s'%(stim_sort)]['target']
+            ref = seq_spk[2]
+            if np.isnan(seq_spk[5]).sum()==0:
+                targ = seq_spk[5]
+                targ_unswap = targ.copy()
+                targ_unswap[:, 10:40] = targ[:, 0:30]
+                targ_unswap[:, :10] = targ[:, 30:40]               
+            elif np.isnan(seq_spk[6]).sum()==0:
+                targ = seq_spk[6]
+                targ_unswap = targ.copy()
+                targ_unswap[:, :20] = targ[:, 20:40]
+                targ_unswap[:, 20:40] = targ[:, :20]                 
+            _, ref_mpos = get_neuID_and_sortID(ref, max_pos=40)
+            _, targ_mpos = get_neuID_and_sortID(targ, max_pos=40)
+            _, targ_unswap_mpos = get_neuID_and_sortID(targ_unswap, max_pos=40)
+            r[m, a, 1] = np.corrcoef(ref_mpos, targ_mpos)[0, 1]
+            r[m, a, 0] = np.corrcoef(ref_mpos, targ_unswap_mpos)[0, 1]          
+    return r 
+
+def get_kfold_reward_response(root, db, Beh):
+    dat = {}
+    for ndb in db:
+        aHV = load_retino(ndb, root = os.path.join(root, 'retinotopy'))['neu_ar_idx']['aHV']
+        mHV = load_retino(ndb, root = os.path.join(root, 'retinotopy'))['neu_ar_idx']['mHV']
+        spk = load_spk(ndb, root=os.path.join(root, 'spk'))
+        spk = stats.zscore(spk, axis=1)
+        interp_spk = load_interp_spk(ndb, root=os.path.join(root, 'process_data'))
+        u_spk = interp_spk[:, :, 5:40].mean(2) # take mean activity within texture area, starting from 5 (0.5 meter)
+        spk0 = stats.zscore(interp_spk.reshape(interp_spk.shape[0], -1), axis=1).reshape(interp_spk.shape)
+        
+        if 'stimtype' in ndb.keys():
+            beh = Beh['%s_%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'], ndb['stimtype'])]
+            mname = ndb['mname'] + '_' + ndb['stimtype']
+        else:
+            beh = Beh['%s_%s_%s'%(ndb['mname'], ndb['datexp'], ndb['blk'])]
+            mname = ndb['mname']
+        SoundFr = beh['SoundFr'].astype(int)
+        Pos = np.mod(beh['SoundDelPos'], beh['Corridor_Length']) # reward positions and cue positions are highly correlated in reward corridor
+                                                                   # since non-reward corridor doesn't have reward, so we use cue positions instead
+        u_pos = Pos.mean()
+        if any(Pos<0):
+            print('some cue frame index are nagtive')
+        uniqW, WallN, isRew, ntrials = beh['UniqWalls'], beh['WallName'], beh['isRew'], beh['ntrials']
+        stim_id = beh['stim_id']
+        stim1 = WallN==uniqW[stim_id==2]
+        stim2 = WallN==uniqW[stim_id==0]
+
+        resp = np.empty(interp_spk.shape[1:])
+        stim_resp = np.empty(interp_spk.shape[1:])
+
+        ranges = np.array([15, 15])
+        spk2Flick = np.empty((ntrials, np.sum(ranges))) * np.nan
+        lick2Flick = np.empty((ntrials, np.sum(ranges))) * np.nan
+        Flick_pos = np.empty(ntrials) * np.nan
+        spk2Cue = np.empty((ntrials, np.sum(ranges))) * np.nan
+        lick2Cue = np.empty((ntrials, np.sum(ranges))) * np.nan
+        
+        random.seed(2025)
+        tr_shuf = np.random.permutation(ntrials)
+        nfold = 10
+        k_tr = int(np.ceil(beh['ntrials']/nfold))
+        for k in range(nfold): # 10 folds
+            test_tr = np.zeros(ntrials).astype(bool)
+            test_tr[tr_shuf[k * k_tr : (k+1) * k_tr]] = True # test trials index
+            ### using training trials to get dprimes
+            dp0 = dprime(spk[:, SoundFr[stim1 & ~test_tr]], spk[:, SoundFr[stim2 & ~test_tr]]) # equivilent to using all frames within the whole corridor
+            dp1 = dprime(u_spk[:, (Pos > u_pos) & stim1 & ~test_tr & isRew],
+                              u_spk[:, (Pos <= u_pos) & stim1 & ~test_tr & isRew])        
+            thr = np.percentile(dp1[aHV], 95) # dprime at 95 percentile in aHV
+            sel_idx = (dp0 > 0.3) & (dp1 >= thr) & aHV
+
+            sel_spk = spk0[sel_idx, :, :][:, test_tr]
+            resp[test_tr] = np.nanmean(sel_spk, 0) # mean across neurons
+            
+            stim_resp[test_tr] = spk0[(dp0 >= 0.3) & mHV][:, test_tr].mean(0) # get leaf1 selective neurons from mHV 
+            print('%d fold, neurons selected: %d'%(k, sel_idx.sum()))
+
+            Flick_pos_temp, spk2Flick_temp, lick2Flick_temp = spk_2_firstLick(spk[sel_idx].mean(0), beh, ranges=ranges, bins=30)
+            Flick_pos[test_tr] = Flick_pos_temp[test_tr]
+            spk2Flick[test_tr] = spk2Flick_temp[test_tr]
+            lick2Flick[test_tr] = lick2Flick_temp[test_tr]
+            
+            spk2Cue_temp, lick2cue_temp = spk_2_cue(spk[sel_idx].mean(0), beh, ranges=ranges, bins=30)
+            spk2Cue[test_tr] = spk2Cue_temp[test_tr]
+            lick2Cue[test_tr] = lick2cue_temp[test_tr]            
+
+        dat[mname] = {'resp':resp, 'stim_resp':stim_resp, 'beh':beh, 'resp2FL':spk2Flick, 'FL_pos':Flick_pos, 'lick2FL':lick2Flick, 'resp2Cue':spk2Cue, 'lick2Cue':lick2Cue}     
+    return dat
+
+def get_reward_neuorns(root, db, beh):
+    dat = {}
+
+    aHV = load_retino(db, root = os.path.join(root, 'retinotopy'))['neu_ar_idx']['aHV']
+    spk = load_spk(db, root=os.path.join(root, 'spk'))
+    interp_spk = load_interp_spk(db, root=os.path.join(root, 'process_data'))
+    u_spk = interp_spk[:, :, 5:40].mean(2) # take mean activity within texture area, starting from 5 (0.5 meter)
+    spk0 = stats.zscore(interp_spk.reshape(interp_spk.shape[0], -1), axis=1).reshape(interp_spk.shape)
+
+    SoundFr = beh['SoundFr'].astype(int)
+    Pos = np.mod(beh['SoundDelPos'], beh['Corridor_Length']) # reward positions and cue positions are highly correlated in reward corridor
+                                                               # since non-reward corridor doesn't have reward, so we use cue positions instead
+    u_pos = Pos.mean()
+    uniqW, WallN, isRew, ntrials = beh['UniqWalls'], beh['WallName'], beh['isRew'], beh['ntrials']
+    stim_id = beh['stim_id']
+    stim1 = WallN==uniqW[stim_id==2]
+    stim2 = WallN==uniqW[stim_id==0]
+
+    dp0 = dprime(spk[:, SoundFr[stim1]], spk[:, SoundFr[stim2]]) # equivilent to using all frames within the whole corridor
+    dp1 = dprime(u_spk[:, (Pos >= u_pos) & stim1 & isRew], u_spk[:, (Pos < u_pos) & stim1 & isRew])        
+    thr = np.percentile(dp1[aHV], 95) # dprime at 95 percentile in aHV
+    sel_idx = (dp0 >= 0.3) & (dp1 >= thr) & aHV
+    
+    sel_spk = spk0[sel_idx,:,:]        
+
+    dat['Example_reward_neurons_%s_%s_%s'%(db['mname'], db['datexp'], db['blk'])] = {'resp':sel_spk, 'beh':beh}     
+    return dat
+
+
+def spk_2_firstLick(spk, beh, ranges=[15, 15], bins=30):
+    """ranges: frames included before and after first lick
+        spk: one dimensional activity
+    """
+    lickPos, lickFr, lickTr, ntrials  = beh['LickPos'], beh['LickFr'].astype(int), beh['LickTrind'].astype(int), beh['ntrials']
+    spk2Flick = np.empty((ntrials, np.sum(ranges))) * np.nan
+    lick2Flick = np.empty((ntrials, np.sum(ranges))) * np.nan
+    Flick_pos = np.empty(ntrials) * np.nan
+    for n in range(ntrials):
+        idx = lickTr==n
+        if idx.sum()>0:
+            F_id = int(lickFr[np.where(idx)[0][0]]) # first lick frame index
+            lickFr_offset = lickFr - F_id # align lick frame to first lick
+            temp_spk = spk[F_id - ranges[0] : F_id+ranges[1]]
+            if len(temp_spk)>0:
+                Flick_pos[n] = lickPos[idx][0]
+                spk2Flick[n] = spk[F_id - ranges[0] : F_id+ranges[1]]
+                temp_lick = lickFr_offset[(lickFr_offset>=-ranges[0]) & (lickFr_offset<=ranges[1])] + ranges[0]
+                hist, edge = np.histogram(temp_lick, bins=bins, range=(0, np.sum(ranges)))
+                lick2Flick[n] = hist
+    return Flick_pos, spk2Flick, lick2Flick
+
+def spk_2_cue(spk, beh, ranges=[15, 15], bins=30):
+    """ranges: frames included before and after cue frame
+        spk: one dimensional activity
+    """
+    SoundFr, lickFr, lickTr, ntrials  = beh['SoundFr'].astype(int), beh['LickFr'].astype(int), beh['LickTrind'].astype(int), beh['ntrials']
+    spk2Cue = np.empty((ntrials, np.sum(ranges))) * np.nan
+    lick2Cue = np.empty((ntrials, np.sum(ranges))) * np.nan
+    for n in range(ntrials):
+        spk2Cue[n] = spk[SoundFr[n] - ranges[0] : SoundFr[n] + ranges[1]]
+        
+        temp_lick = lickFr[(lickFr>=SoundFr[n]-ranges[0]) & (lickFr<=SoundFr[n]+ranges[1])] - SoundFr[n] + ranges[0]
+        hist, edge = np.histogram(temp_lick, bins=bins, range=(0, np.sum(ranges)))
+        lick2Cue[n] = hist
+    return spk2Cue, lick2Cue
