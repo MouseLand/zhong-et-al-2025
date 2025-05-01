@@ -50,8 +50,6 @@ def sup_perf_plot(ax, perf, title='', xlm=[-0.3, 1.3]):
     for label, color in zip(xticklabels, colors):
         label.set_color(color)
 
-
- 
 def make_hot_cmap():
     new_hot = cm.get_cmap('magma_r', 256)
     newcolors = new_hot(np.linspace(0, 1, 256))
