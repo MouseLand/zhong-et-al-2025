@@ -8,9 +8,9 @@ import utils
 
 def load_fig6_dat(root):
     dat = {}
-    pretrain = np.load(os.path.join(root, r'beh\Behavior_only_mice\Beh_pretrain_on_nat_image.npy'), allow_pickle=1).item()
-    control = np.load(os.path.join(root, r'beh\Behavior_only_mice\Beh_no_pretrain.npy'), allow_pickle=1).item()
-    grating = np.load(os.path.join(root, r'beh\Behavior_only_mice\Beh_pretrain_on_grat_image.npy'), allow_pickle=1).item()
+    pretrain = np.load(os.path.join(root, r'beh\Unsupervised_pretraining_behavior\Beh_pretrain_on_nat_image.npy'), allow_pickle=1).item()
+    control = np.load(os.path.join(root, r'beh\Unsupervised_pretraining_behavior\Beh_no_pretrain.npy'), allow_pickle=1).item()
+    grating = np.load(os.path.join(root, r'beh\Unsupervised_pretraining_behavior\Beh_pretrain_on_grat_image.npy'), allow_pickle=1).item()
     dat['nat_d1'] = utils.pretrain_exp_lick_raster(pretrain['CBL08_2023_05_09_1_day1'])
     dat['nat_d4'] = utils.pretrain_exp_lick_raster(pretrain['CBL08_2023_05_12_1_day4'])
     dat['ctl_d1'] = utils.pretrain_exp_lick_raster(control['SL3_2023_06_13_1_day1'])

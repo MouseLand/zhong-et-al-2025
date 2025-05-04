@@ -14,10 +14,10 @@ def load_fig1_dat(root = r'D:\Results\Zhong-et-al-2025'):
     dat['aftLearn_lick_raster'] = utils.get_lick_raster(example_behavior['TX109_2023_04_14_1'])
 
     # load before learning performance
-    beh0 = np.load(os.path.join(beh_path, 'Beh_sup_train1_before_learning.npy'), allow_pickle=1).item()
+    beh0 = np.load(os.path.join(root, 'beh\Beh_sup_train1_before_learning.npy'), allow_pickle=1).item()
     dat['mean_beh_bef'] = utils.get_mean_lick_response(beh0, lick_typ='befRew')
     # load after learning performance
-    beh1 = np.load(os.path.join(beh_path, 'Beh_sup_train1_after_learning.npy'), allow_pickle=1).item()
+    beh1 = np.load(os.path.join(root, 'beh\Beh_sup_train1_after_learning.npy'), allow_pickle=1).item()
     dat['mean_beh_aft'] = utils.get_mean_lick_response(beh1, lick_typ='befRew') 
     
     # load distribution map of stimulus selective neurons

@@ -331,13 +331,13 @@ def get_dist_img(xpos, ypos, sel_idx=None, sig=30, sig_bg=30, xoff=800, yoff=800
     """
     x, y = xpos+xoff, ypos+yoff
     bg, img = np.zeros((5000,5000)), np.zeros((5000,5000))
-    bg[y.astype(int),x.astype(int)] = 1.0
+    bg[y.astype(int), x.astype(int)] = 1.0
     bg = ndimage.gaussian_filter(bg, sigma=1, truncate=sig_bg)>0 # create a background map
     bg = bg.astype(float)
-    bg[bg==False]=np.nan # fill empty space with nan
+    bg[bg==False] = np.nan # fill empty space with nan
     
     if any(sel_idx != None):
-        img[y[sel_idx].astype(int),x[sel_idx].astype(int)] = 1
+        img[y[sel_idx].astype(int), x[sel_idx].astype(int)] = 1
     img = ndimage.gaussian_filter(img, sigma=sig)
     img[np.isnan(bg)] = np.nan
     img = np.fliplr(img)
@@ -363,8 +363,8 @@ def Get_density_map(dprime, retinotopy, dp_thr=0.3, typ='both', n_down = 10):
 
         img0 = get_dist_img(xpos, ypos, idx[idx_neu], xoff=xoff, yoff=yoff)
         img.append(img0/nneu) # devided by total neurons
-    img = np.nanmean(np.array(img),axis=0) # mean across mice
-    imgs = {'img': img[::n_down,::n_down], 'n_down':n_down}
+    img = np.nanmean(np.array(img), axis=0) # mean across mice
+    imgs = {'img':img[::n_down, ::n_down], 'n_down':n_down} # scale down
     return imgs           
 
 def Get_dprime_selective_neuron(db, Beh, stim_ID=[2, 0], root=''):
@@ -440,7 +440,7 @@ def Get_dprime_rewPred_neuron(db, Beh, stim_dp, root='', load_save_interp_spk=1,
             interp_spk = get_interpPos_spk(spk[:, VRmove[:nfr]], ft_AcumPos[VRmove][:nfr], 
                                                  ntrials, n_bins=60, lengths=CL)
         print('load interpolated spk..')
-        u_spk = interp_spk[:,:,5:40].mean(2) #reward position alway >=5 and <=40  
+        u_spk = interp_spk[:, :, 5:40].mean(2) #reward position alway >=5 and <=40  
         dp1 = dprime(u_spk[:, (SoundPos>SoundPos.mean()) & stim_tr],
                           u_spk[:,(SoundPos<=SoundPos.mean()) & stim_tr]) # early vs late cue trials 
         idx1 = (dp1>=dp_thr) & sel_ind
