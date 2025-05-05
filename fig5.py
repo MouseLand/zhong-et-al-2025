@@ -267,10 +267,8 @@ def plot_rewResp_in_leaf2(ax, dat):
         islick = utils.lickCount(dat[kn]['beh'], def_range=[0, 40])['inRange'][rewStim]
         if (len(islick)-islick.sum())>=5:
             resp = dat[kn]['resp'][rewStim][:, 0:40].mean(1)
-#             print(resp[~islick].shape, resp[islick].shape)
             u_spk.append([resp[~islick].mean(0), resp[islick].mean(0)])
     u_spk = np.array(u_spk)
-#     print(u_spk.shape)
     u, sem = u_spk.mean(0), u_spk.std(0, ddof=1)/np.sqrt(u_spk.shape[0])
     ax.plot([0, 1], u_spk.T, color='c', lw=0.5, alpha=0.5)
     ax.plot([0, 1], u, color='k', lw=1)
@@ -287,10 +285,8 @@ def plot_stimResp_in_leaf2(ax, dat):
         islick = utils.lickCount(dat[kn]['beh'], def_range=[0, 40])['inRange'][rewStim]
         if (len(islick)-islick.sum())>=5:
             resp = dat[kn]['stim_resp'][rewStim][:, 0:40].mean(1)
-#             print(resp[~islick].shape, resp[islick].shape)
             u_spk.append([resp[~islick].mean(0), resp[islick].mean(0)])
     u_spk = np.array(u_spk)
-#     print(u_spk.shape)
     u, sem = u_spk.mean(0), u_spk.std(0, ddof=1)/np.sqrt(u_spk.shape[0])
     ax.plot([0, 1], u_spk.T, color='c', lw=0.5, alpha=0.5)
     ax.plot([0, 1], u, color='k', lw=1)

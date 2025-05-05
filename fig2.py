@@ -269,8 +269,6 @@ def SI_test1(ax, root):
     for f,fn in enumerate(fns):
         cd_proj = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_tr_mean'][:, :, :4] # take medial area
         cd_proj = cd_proj[:, :, [0, 1, 3, 2]].astype(float)
-#         dx = cd_proj[:, :, 1:3]-cd_proj[:, :, 0:1]
-#         dy = cd_proj[:, :, 3:4]-cd_proj[:, :, 1:3]
         dx = abs(cd_proj[:, :, 1:3]-cd_proj[:, :, 0:1])
         dy = abs(cd_proj[:, :, 3:4]-cd_proj[:, :, 1:3])
         dxy = cd_proj[:, :, 3:4]-cd_proj[:, :, 0:1]
