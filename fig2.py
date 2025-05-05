@@ -183,7 +183,6 @@ def seq_corr_all_areas(ax, root, stim_sort='leaf1'):
     fn1 = 'unsup_test1_sort_spk.npy'
     fn2 = 'naive_test1_sort_spk.npy'
     cols = ['g', [0.46,0, 0.23], 'k']
-    R = []
     u, sem = np.empty((3, 4, 2)), np.empty((3, 4, 2))
     for f, fn in enumerate([fn0, fn1, fn2]): 
         dat = np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item()

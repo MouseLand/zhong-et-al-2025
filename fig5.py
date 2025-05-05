@@ -64,7 +64,7 @@ def plot_fig5(dat, root):
 
     # example mouse, test3  
     axs = [fig.add_axes([x, y, w, h]), fig.add_axes([x+dx, y, w, h]), fig.add_axes([x+dx*2, y, w, h]), fig.add_axes([x+dx*3 ,y, w, h])]
-    test3_rewPred_resp(axs, dat['RewResp_test3']['VR2_swap2'])
+    test3_rewPred_resp(axs, dat['RewResp_test3']['VR2_swap1'])
 
     # value aligned to cue, test1 
     x,y, dx,dy, w,h =0.02,0.03, 0.12,0.12, 0.105,0.23
@@ -190,7 +190,7 @@ def test3_rewPred_resp(ax, dat, vmin=0, vmax = 0.5, ms=1.5):
     uniqW, WallN, stim_id = dat['beh']['UniqWalls'], dat['beh']['WallName'], dat['beh']['stim_id']
     stimN = ['circle1', 'leaf1_swap', 'leaf2', 'leaf1']
     cols = ['r', [0,0.47,0.47], 'c', 'b']
-    for i, sid in enumerate([0, 6, 3, 2]): # leaf1_swap index: 5 or 6 
+    for i, sid in enumerate([0, 5, 3, 2]): # leaf1_swap index: 5 or 6 
         stim  = WallN==uniqW[stim_id==sid]
         s_cue = CuePos[stim]
         sort = np.argsort(s_cue)
