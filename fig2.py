@@ -23,6 +23,10 @@ def plot_fig2(dat, root):
     plt.rcParams["font.family"] = "arial"
     plt.rcParams["font.size"] = 5   
     
+    ax_text = fig.add_axes([0,0,1,1])
+    ax_text.set_facecolor('None')
+    ax_text.axis('off')
+
     # example lick raster
     x,y, dx,dy, w,h =0.33,0.75, 0.123,0, 0.1,0.2
     ax_circle1 = fig.add_axes([x,y,w,h])
@@ -47,7 +51,7 @@ def plot_fig2(dat, root):
     test_perf_plot(ax_beh, dat['mean_test1_perf'], title='', yn=1, xlm=[-0.3, 3.3])
 
     ################## position sequence in real data  ######################
-    x,y, dx,dy, w,h =0.04,0.395, 0.1,0.17, 0.075,0.11
+    x,y, dx,dy, w,h =0.04,0.395, 0.1,0.17, 0.075,0.1
 
     axes_sequence = [fig.add_axes([x + i*dx, y+dy, w, h]) for i in range(4)]
     test1_peak_pos_scatter_plot(axes_sequence, dat['sort_spk'], mname='VR2', arname='mHV', stim_sort='leaf1', vmax = 1)
@@ -64,6 +68,9 @@ def plot_fig2(dat, root):
     x,y, dx,dy, w,h =0.7,0.39, 0.09,0.1, 0.3,0.27
     ax_coef = fig.add_axes([x,y,w,h])
     seq_corr_all_areas(ax_coef, root, stim_sort='leaf1')
+    ax_coef.text(0.75, 0.85, 'task mice', color='g', transform=ax_coef.transAxes)
+    ax_coef.text(0.75, 0.78, 'unsupervised', color=[0.46,0,0.23], transform=ax_coef.transAxes)
+    ax_coef.text(0.75, 0.7, 'naive', color='k', transform=ax_coef.transAxes)
 
     ################## stimulus responses, average across neurons  ######################
     x,y, dx,dy, w,h =0.02,0.03, 0.07,0.175, 0.045,0.092
@@ -89,7 +96,25 @@ def plot_fig2(dat, root):
     ################## generalization index  ######################
     x,y, dx,dy, w,h =0.7,0.035, 0.1,0.1, 0.3,0.27
     ax_SI = fig.add_axes([x,y,w,h])
-    SI_test1(ax_SI, root)    
+    SI_test1(ax_SI, root) 
+    ax_SI.text(0.6, 0.12, 'task mice', color='g', transform=ax_SI.transAxes)
+    ax_SI.text(0.6, 0.05, 'unsupervised', color=[0.46,0,0.23], transform=ax_SI.transAxes)
+    ax_SI.text(0.6, 0.19, 'naive', color='k', transform=ax_SI.transAxes)    
+    
+    
+    ax_text.text(0.315, 1.01, r'$\bf{a}$ Example lick rasters', fontsize=5.5)
+    ax_text.text(0.835, 1.01, r"$\bf{b}$ Licking behavior in $test1$", fontsize=5.5)
+    ax_text.text(0.01, 0.689, r"$\bf{c}$ Example sequential responses of, leaf1-selective neurons (medial, task mouse)", fontsize=5.5)
+
+    ax_text.text(.43, .689, r"$\bf{d}$ Sequence similarity ($r$, medial, task mice)", fontsize=5.5)
+    ax_text.text(0.66, 0.689, r"$\bf{e}$ Sequence similarity ($r$, all areas)", fontsize=5.5) 
+    
+
+    ax_text.text(.01, .325, r"$\bf{f}$ Example leaf1-selective population (medial, task mouse)", fontsize=5.5)
+    ax_text.text(0.01, 0.145, r"$\bf{g}$ Example circle1-selective population (medial, task mouse)", fontsize=5.5)  
+
+    ax_text.text(.33, .325, r"$\bf{h}$ Coding direction of leaf1-circle1 (medial, task mouse, test trials)", fontsize=5.5)
+    ax_text.text(0.69, 0.325, r"$\bf{i}$ Similarity index ($SI$) on new stimuli", fontsize=5.5)     
 
 def lick_raster_plot(ax, lick, show_reward=1, show_firstLick=0, title='', xlm=[0, 60], tcolor='k'):
     plt.sca(ax)

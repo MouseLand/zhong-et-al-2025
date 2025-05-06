@@ -36,12 +36,12 @@ def plot_fig4(dat, root):
     test2_perf_plot(ax_beh1, dat['test2_beh'], title='', yn=1, xlm=[-0.3, 3.3])
 
     ########## performance in test3  #################
-    x,y, dx,dy, w,h =0.23,0.16, 0,0.045, 0.14,0.22
+    x,y, dx,dy, w,h =0.23,0.15, 0,0.045, 0.14,0.22
     ax_beh2 = fig.add_axes([x,y,w,h])
     test3_perf_plot(ax_beh2, dat['test3_beh'], title='', yn=1, xlm=[-0.3, 3.3])
 
     ########## projection along coding direction in test2  #################
-    x,y, dx,dy, w,h =0.315,0.44, 0.09,0.075, 0.075,0.06
+    x,y, dx,dy, w,h =0.315,0.44, 0.09,0.083, 0.075,0.06
 
     V1_ax = [fig.add_axes([x, y+2*dy, w, h]), fig.add_axes([x, y+dy, w, h]), fig.add_axes([x, y, w, h])]
     mHV_ax = [fig.add_axes([x+dx, y+2*dy, w, h]), fig.add_axes([x+dx, y+dy, w, h]), fig.add_axes([x+dx, y, w, h])]
@@ -51,16 +51,21 @@ def plot_fig4(dat, root):
           r'process_data\sup_test2_coding_direction.npy']
     mnames = ['TX124', 'TX123', 'TX108']
     for i in range(3):
-        leaf3_coding_direction(V1_ax[i], root, fns[i], mnames[i], 'V1')
+        isxn = 1 if i==2 else 0
+        leaf3_coding_direction(V1_ax[i], root, fns[i], mnames[i], 'V1', isxn=isxn)
         leaf3_coding_direction(mHV_ax[i], root, fns[i], mnames[i], 'mHV', isyn=0)
 
     ################## SI for leaf3  ######################
     x,y, dx,dy, w,h =0.53,0.44, 0.11,0.115, 0.25,0.22
     ax_SI_leaf3 = fig.add_axes([x,y,w,h])     
     SI_test2(ax_SI_leaf3, root)
+    ax_SI_leaf3.text(1, 0.26, 'naive', color='k', transform=ax_SI_leaf3.transAxes) 
+    ax_SI_leaf3.text(1, 0.19, 'unsup_grat', color='0.5', transform=ax_SI_leaf3.transAxes)     
+    ax_SI_leaf3.text(1, 0.12, 'unsupervised', color=[0.46,0,0.23], transform=ax_SI_leaf3.transAxes)
+    ax_SI_leaf3.text(1, 0.05, 'task mice', color='g', transform=ax_SI_leaf3.transAxes)     
 
     ################ swap sequences in mHV   ##############
-    x,y, dx,dy, w,h =0.42,0.16, 0.08,0.08, 0.067,0.06
+    x,y, dx,dy, w,h =0.42,0.15, 0.08,0.08, 0.067,0.06
 
     naive = [fig.add_axes([x, y+2*dy, w, h]), fig.add_axes([x+dx, y+2*dy, w, h]), fig.add_axes([x+2.6*dx, y+2*dy, w, h])]
     test3_sort_spk_plot(naive, dat['sort_spk'][0], mname='TX119_1', arname='mHV', vmax = 1, isxn=0, istn=1, yn='naive')
@@ -72,12 +77,25 @@ def plot_fig4(dat, root):
     test3_sort_spk_plot(sup, dat['sort_spk'][2], mname='TX108', arname='mHV', vmax = 1, isxn=1, istn=0, yn='supervised')
 
     ################## coeficient  ######################
-    x,y, dx,dy, w,h =0.75,0.16, 0.11,0.11, 0.25,0.22
+    x,y, dx,dy, w,h =0.75,0.15, 0.11,0.11, 0.25,0.22
     ax_coef = fig.add_axes([x,y,w,h])
     test3_seq_corr_all_areas(ax_coef, dat['sort_spk'])    
+    ax_coef.text(0.75, 0.12, 'naive', color='k', transform=ax_coef.transAxes)     
+    ax_coef.text(0.75, 0.07, 'unsupervised', color=[0.46,0,0.23], transform=ax_coef.transAxes)
+    ax_coef.text(0.75, 0.02, 'task mice', color='g', transform=ax_coef.transAxes)  
+    
+    ax_text.text(0.125, 0.99, r'$\bf{a}$ Licking behavior in $test2$', fontsize=5.5)
+    ax_text.text(0.3, 0.99, r"$\bf{b}$ Example coding direction of leaf1-leaf2", fontsize=5.5)
+    ax_text.text(0.52, 0.99, r"$\bf{c}$ Similarity index for leaf3 and circle1", fontsize=5.5)
+
+    ax_text.text(.215, .475, r"$\bf{d}$ Licking behavior in $test3$", fontsize=5.5)
+    ax_text.text(0.405, 0.475, r"$\bf{e}$ Example leaf1-selective neurons (medial, leaf1 $vs$ circle1)", fontsize=5.5) 
     
 
-def leaf3_coding_direction(ax, root, fn, mname, arn, isyn=1):
+    ax_text.text(.72, .475, r"$\bf{f}$ Sequence similarity", fontsize=5.5)
+     
+
+def leaf3_coding_direction(ax, root, fn, mname, arn, isxn=0, isyn=1):
     dat = np.load(os.path.join(root, fn), allow_pickle=1).item()
     resp1 = dat['proj_2_stim1'][mname][arn]
     resp2 = dat['proj_2_stim2'][mname][arn]   
@@ -91,9 +109,10 @@ def leaf3_coding_direction(ax, root, fn, mname, arn, isyn=1):
         ax.plot(u, lw=0.5, color=cols[s])
         ax.fill_between(np.arange(len(u)), u-sem, u+sem, color=cols[s], alpha=0.3)  # Shaded STD area 
         yn = 'projection (a.u.)' if isyn else ''
+        xn = 'position (m)' if isxn else ''
         utils.fmt(ax, xlm=[dat['pos_from_prev'], dat['pos_from_prev']+60], 
                   xtick=[[10, 30, 50, 70], [0, 2, 4, 6]], ytick=[[-1, 0, 1]], ylm=[-1.5, 1.5],
-                 xlabel='position (m)', ylabel=yn, ypad=-2) 
+                 xlabel=xn, ylabel=yn, ypad=-2) 
         
 def test2_perf_plot(ax, perf, title='', yn=1, xlm=[-0.3, 1.3]):
     r = perf['u_sem']

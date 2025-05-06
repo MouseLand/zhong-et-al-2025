@@ -45,7 +45,7 @@ def plot_fig5(dat, root):
     x,y, dx,dy, w,h =0.42,0.345, 0.1,0.1, 0.14,0.30
     ax_frac=fig.add_axes([x,y,w,h])
     plot_rewPred_neu_frac(ax_frac, root, xlm=[2.9, 3.6])
-    ax_frac.text(0.4, 0.98, 'aHV', transform=ax_frac.transAxes)
+#     ax_frac.text(0.4, 0.98, 'aHV', transform=ax_frac.transAxes)
     utils.fmt(ax_frac, xtick=[[3, 3.5], ['before\nlearning', 'after\nlearning']])
 
     x,y, dx,dy, w,h =0.62,0.365, 0.095,0.16, 0.075,0.1
@@ -83,7 +83,27 @@ def plot_fig5(dat, root):
 
     # stim vs beh, test1
     ax_stim2beh=fig.add_axes([x+dx,y,w,h],rasterized=True)
-    plot_stimResp_in_leaf2(ax_stim2beh, dat['RewResp_test1'])    
+    plot_stimResp_in_leaf2(ax_stim2beh, dat['RewResp_test1'])  
+    
+    ax_text.text(0.01, 0.65, r"$\bf{a}$ Distribution of reward-prediction neurons ($d'_{late\ vs.\ early}$ $\geq$ 0.3)", fontsize=5.5)
+    ax_text.text(0.385, 0.65, r"$\bf{b}$ Summary of changes in anterior areas", fontsize=5.5)
+    ax_text.text(0.605, 0.65, r"$\bf{c}$ Example reward-prediction activity (anterior, $test1$)", fontsize=5.5)
+
+    ax_text.text(.74, .622, r"activity of example neuron", fontsize=5.5)
+    ax_text.text(0.72, 0.452, r"average activity across neurons", fontsize=5.5) 
+    
+
+    ax_text.text(0, .25, r"$\bf{d}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(0, .23, r"aligned to sound cue (in leaf1)", fontsize=5.5)
+    ax_text.text(.16, .25, r"$\bf{e}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(.16, .23, r"aligned to first lick (in leaf1)", fontsize=5.5)
+    ax_text.text(.315, .25, r"$\bf{f}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(.315, .23, r"(anterior in leaf2)", fontsize=5.5)
+    ax_text.text(.465, .25, r"$\bf{g}$ leaf1-selective neurons,", fontsize=5.5)
+    ax_text.text(.465, .23, r"(medial in leaf2)", fontsize=5.5)
+    
+    ax_text.text(.605, .265, r"$\bf{g}$ Example average reward-prediction activity (anterior, $test2$)", fontsize=5.5)
+    ax_text.text(.605, .095, r"$\bf{g}$ Example average reward-prediction activity (anterior, $test3$)", fontsize=5.5)
     
 def make_hot_cmap():
     new_hot = cm.get_cmap('magma_r', 256)
@@ -223,9 +243,9 @@ def plot_rewResp_2_firstLick(ax, dat):
     ax2 = ax.twinx()
     ax2.plot(u1, color='0.5', lw=1)
     ax2.fill_between(np.arange(len(u1)), u1-sem1, u1+sem1, color='0.5', alpha=0.3, edgecolor='None')
-    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.8, 2], ytick=[[0, 1, 2]], xlabel='time to first lick (s)',
+    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.8, 1.3], ytick=[[0, 1, 2]], xlabel='time to first lick (s)',
               xtick=[np.linspace(0,30,11)[1::2]-0.5,np.linspace(0,10,11)[1::2].astype(int)-5], xlm=[-0.5, len(u0)-0.5])
-    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0)
+    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0, ylm=[-0.2, 4.5])
     ax.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)    
     
@@ -252,9 +272,9 @@ def plot_rewResp_2_Cue(ax, dat):
     ax2 = ax.twinx()
     ax2.plot(u1, color='0.5', lw=1)
     ax2.fill_between(np.arange(len(u1)), u1-sem1, u1+sem1, color='0.5', alpha=0.3, edgecolor='None')
-    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.8, 2], xlabel='time to cue (s)', 
+    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.7,2], xlabel='time to cue (s)', 
               xtick=[np.linspace(0,30,11)[1::2]-0.5,np.linspace(0,10,11)[1::2].astype(int)-5], xlm=[-0.5, len(u0)-0.5])
-    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0)
+    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0, ylm=[-0.3, 3.7])
     ax.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)        
     

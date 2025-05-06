@@ -138,7 +138,7 @@ def plot_fig1(dat, root):
     ax_text.text(0.015, 0.18, r"$\bf{d}$ leaf1-selective neurons ($d' \geq$ 0.3, odd trials)", fontsize=6)
 
     ax_text.text(.39, .44, r"$\bf{e}$ Distribution of selective neurons across areas", fontsize=6)
-    ax_text.text(0.67, 0.44, r"$\bf{e}$ Summary of changes in leaf1-circle1 selective neurons", fontsize=6)
+    ax_text.text(0.67, 0.44, r"$\bf{f}$ Summary of changes in leaf1-circle1 selective neurons", fontsize=6)
     
 
 def make_hot_cmap():

@@ -59,14 +59,18 @@ def plot_fig6(dat, root):
 
     # lick performance  
     x,y, dx,dy, w,h =0.87,0.29, 0,0.177, 0.12,0.135
-    ax_perf1 = fig.add_axes([x, y+2*dy, w, h])
-    pretrain_beh_plot(ax_perf1, dat['natPerf'],isxn=0)
+    ax_perf0 = fig.add_axes([x, y+2*dy, w, h])
+    pretrain_beh_plot(ax_perf0, dat['natPerf'],isxn=0)
+    ax_perf0.text(0.5, 1.05, 'VR$_{n}$ pretraining mice', transform=ax_perf0.transAxes, horizontalalignment='center')
 
     ax_perf1 = fig.add_axes([x,y+dy,w,h])
     pretrain_beh_plot(ax_perf1, dat['gratPerf'],isxn=0)
+    ax_perf1.text(0.5, 1.05, 'VR$_{g}$ pretraining mice', transform=ax_perf1.transAxes, horizontalalignment='center')    
 
     ax_perf2 = fig.add_axes([x,y,w,h])
     pretrain_beh_plot(ax_perf2, dat['ctlPerf'],isxn=0)
+    ax_perf2.text(0.5, 1.05, 'no pretraining mice', transform=ax_perf2.transAxes, horizontalalignment='center')     
+    
 
     ################## lick diff. 5 days  ######################
     x,y, dx,dy, w,h =0.03,0.07, 0,0.15, 0.29,0.33
@@ -82,6 +86,25 @@ def plot_fig6(dat, root):
     x,y, dx,dy, w,h =0.87,0.07, 0.08,0, 0.12,0.145
     tr_ax = fig.add_axes([x,y,w,h])
     number_of_trials(tr_ax, dat)   
+    
+    ax_text.text(0.36, 1, r"$\bf{a}$ Licks in day 1 of active reward", fontsize=5.5)
+    ax_text.text(.61, 1, r"$\bf{b}$ Licks in day 4 of active reward", fontsize=5.5)
+    ax_text.text(.84, 1, r"$\bf{c}$ Learning performance", fontsize=5.5)
+
+    ax_text.text(0, .46, r"$\bf{d}$ Performance summary", fontsize=5.5)
+    ax_text.text(.34, .21, r"$\bf{e}$ Distribution of first-licks", fontsize=5.5)
+    
+    ax_text.text(.84, .21, r"$\bf{f}$ Number of trials per session", fontsize=5.5)
+    
+    ax_text.text(.405, .96, r"VR$_{n}$ pretraining (mouse 1)", fontsize=5.5)
+    ax_text.text(.415, .71, r"VR$_{g}$ pretraining (mouse 1)", fontsize=5.5)
+    ax_text.text(.415, .46, r"no pretraining (mouse 1)", fontsize=5.5)
+    
+    ax_text.text(.66, .96, r"VR$_{n}$ pretraining (mouse 1)", fontsize=5.5)
+    ax_text.text(.67, .71, r"VR$_{g}$ pretraining (mouse 1)", fontsize=5.5)
+    ax_text.text(.66, .46, r"no pretraining (mouse 1)", fontsize=5.5) 
+    
+    ax_text.text(.6, .205, r"active reward", fontsize=5.5) 
     
 def lick_raster(ax, dat):
     ax[0].scatter(dat['LickPos'][1][0], dat['LickPos'][1][1], marker='.', s=2, color='k', edgecolor='None')  

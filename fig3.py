@@ -49,6 +49,10 @@ def plot_fig3(dat, root):
     fig = plt.figure(figsize=(7, 7), dpi=500)
     plt.rcParams["font.family"] = "arial"
     plt.rcParams["font.size"] = 5
+    
+    ax_text = fig.add_axes([0,0.33,1,0.60])
+    ax_text.set_facecolor('None')
+    ax_text.axis('off')    
 
     ################## distribution for leaf2  ######################
     x,y, dx,dy, w,h =0.0, 0.67, 0.135, 0.12, 0.12, 0.12
@@ -59,7 +63,7 @@ def plot_fig3(dat, root):
 
     a, b, n =5, 10, 8 # for vmax
     vmax = a/(b**n) # i.e. 5x10e-8
-    for i, itn in enumerate(['naive mice', 'task mice', 'unsup. mice', 'task mice', 'unsup. mice']):
+    for i, itn in enumerate(['naive mice', 'task mice\nwhen new', 'unsup. mice\nwhen new', 'task mice\nafter learning', 'unsup. mice\nafter learning']):
         distribution_map(img_ax1[i], dat['img'][i]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
         img_ax1[i].text(0.35, 0.85, itn, transform=img_ax1[i].transAxes)    
     cbar1 = fig.add_axes([x+0.02,y+0.06,0.05,0.005])
@@ -74,6 +78,8 @@ def plot_fig3(dat, root):
     plot_frac(ax_frac, dat['frac1'][0]['value'][:, :, 2, 1], dat['frac1'][1]['value'][:, :, 2, 1], col='g')
     for t,txt in enumerate(['V1', 'mHV', 'lHV', 'aHV']):
         ax_frac.text(0.1 + 0.25*t, 0.98, txt, transform=ax_frac.transAxes)
+    ax_frac.text(0.75, 0.7, 'task mice', color='g', transform=ax_frac.transAxes)
+    ax_frac.text(0.75, 0.65, 'unsupervised', color=[0.46,0,0.23], transform=ax_frac.transAxes)         
     # ################## performance  ######################
     x,y, dx,dy, w,h =0.88, 0.69, 0, 0.08, 0.1, 0.215
     ax_beh = fig.add_axes([x,y,w,h])
@@ -87,7 +93,7 @@ def plot_fig3(dat, root):
     for i, itn in enumerate(['naive mice', 'unsup. mice\nafter learning', 'task mice\nafter learning']):
         distribution_map(img_ax2[i], dat['img1'][i]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
         img_ax2[i].text(0.35, 0.85, itn, transform=img_ax2[i].transAxes)     
-    cbar2 = fig.add_axes([x+3*dx+0.005,y+0.015,0.005,0.06])
+    cbar2 = fig.add_axes([x+3*dx+0.005, y+0.05, 0.005, 0.06])
     cbar(cbar2, cmap=dat['hotcmp'], tickLabel=[0, r'$5\times10^{-8}$'], cbarLabel='density', ticks=[0, 1], labelpad=-15) 
 
     ################## leaf1-leaf2 fraction  ######################
@@ -113,7 +119,20 @@ def plot_fig3(dat, root):
     ################## Similarity Index  ######################
     x,y, dx,dy, w,h =0.69,0.37, 0.11,0.11, 0.29,0.26
     ax_SI = fig.add_axes([x,y,w,h])
-    SI_train2_after_learning(ax_SI, root)    
+    SI_train2_after_learning(ax_SI, root) 
+   
+    
+    ax_text.text(0.01, .98, r"$\bf{a}$ Distribution of leaf2-selective neurons (leaf2 $vs$ circle1, $d'\geq$0.3)", fontsize=5.5)
+    ax_text.text(0.52, 0.98, r"$\bf{b}$ Summary of changes", fontsize=5.5)
+    ax_text.text(0.865, 0.98, r"$\bf{c}$ Licking behavior on leaf2", fontsize=5.5)
+
+    ax_text.text(.01, .54, r"$\bf{d}$ Distribution of selective neurons (leaf1 $vs$ leaf2, $|d'|\geq$0.3)", fontsize=5.5)
+    ax_text.text(0.01, 0.31, r"$\bf{e}$ Summary of selective neurons (leaf1 $vs$ leaf2, $|d'|\geq$0.3)", fontsize=5.5) 
+    
+
+    ax_text.text(.355, .54, r"$\bf{f}$ Coding direction of leaf1-circle1, example mouse (V1)", fontsize=5.5)
+    ax_text.text(0.355, 0.26, r"$\bf{g}$ Coding direction of leaf1-circle1, example mouse (medial)", fontsize=5.5)  
+    ax_text.text(0.68, 0.54, r"$\bf{h}$ Changes of leaf2-$SI$ (similarity index)", fontsize=5.5)     
 
 def make_hot_cmap():
     new_hot = cm.get_cmap('magma_r', 256)
