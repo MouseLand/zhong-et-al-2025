@@ -5,209 +5,311 @@ from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import os
 import utils
+from scipy import stats
 
-def load_fig4_dat(root):
+def load_fig4_dat(root = r'D:\Results\Zhong-et-al-2025'):
     dat = {}
-    beh_path = os.path.join(root, 'beh')
-    # load before learning performance
-    beh0 = np.load(os.path.join(beh_path, 'Beh_sup_test2.npy'), allow_pickle=1).item()
-    dat['test2_beh'] = utils.get_mean_lick_response(beh0, lick_typ='befRew')
-    # load after learning performance
-    beh1 = np.load(os.path.join(beh_path, 'Beh_sup_test3.npy'), allow_pickle=1).item()
-    dat['test3_beh'] = utils.get_test3_mean_lick_response(beh1, lick_typ='befRew') 
-    # load sorted spike
-    fn0 = 'naive_test3_sort_spk.npy'
-    fn1 = 'unsup_test3_sort_spk.npy'
-    fn2 = 'sup_test3_sort_spk.npy'
-    dat['sort_spk'] = [np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item() for fn in [fn0,fn1,fn2]]
+    fns = ['sup_train1_before_learning_rew_distribution.npy',
+            'sup_train1_after_learning_rew_distribution.npy',
+            'unsup_train1_before_learning_rew_distribution.npy',
+            'unsup_train1_after_learning_rew_distribution.npy']
+    dat['img'] = [np.load(os.path.join(root, 'process_data', fn), allow_pickle=1).item() for fn in fns]
+    dat['outlines'] = np.load(os.path.join(root, 'retinotopy/areas.npz'), allow_pickle = True)['out']
+    dat['hotcmp'] = make_hot_cmap() 
+
+    dat['RewResp_test1'] = np.load(os.path.join(root, 'process_data', 'sup_test1_reward_response.npy'), allow_pickle=True).item()
+    dat['RewResp_test2'] = np.load(os.path.join(root, 'process_data', 'sup_test2_reward_response.npy'), allow_pickle=True).item()
+    dat['RewResp_test3'] = np.load(os.path.join(root, 'process_data', 'sup_test3_reward_response.npy'), allow_pickle=True).item()  
     return dat
 
 def plot_fig4(dat, root):
-    fig = plt.figure(figsize=(7, 7),dpi=500)
-    ax_text = fig.add_axes([0,0.15,1,0.53])
+    fig = plt.figure(figsize=(7, 7*7/10.5), dpi=500)
+    ax_text = fig.add_axes([0,0.05,1,0.94])
     ax_text.set_facecolor('None')
     ax_text.axis('off')
     plt.rcParams["font.family"] = "arial"
     plt.rcParams["font.size"] = 5
 
-    ########## performance in test2  #################
-    x,y, dx,dy, w,h =0.135,0.44, 0,0.08, 0.14,0.22
-    ax_beh1 = fig.add_axes([x,y,w,h])
-    test2_perf_plot(ax_beh1, dat['test2_beh'], title='', yn=1, xlm=[-0.3, 3.3])
+    ################## distribution of reward prediction neurons  ######################
+    x,y, dx,dy, w,h =-0.00,0.3, 0.17,0.17, 0.18,0.18
+    ax_rew_dist = [fig.add_axes([x,y+dy,w,h],rasterized=True), fig.add_axes([x+dx,y+dy,w,h],rasterized=True),
+                  fig.add_axes([x,y,w,h],rasterized=True), fig.add_axes([x+dx,y,w,h],rasterized=True)]
 
-    ########## performance in test3  #################
-    x,y, dx,dy, w,h =0.23,0.15, 0,0.045, 0.14,0.22
-    ax_beh2 = fig.add_axes([x,y,w,h])
-    test3_perf_plot(ax_beh2, dat['test3_beh'], title='', yn=1, xlm=[-0.3, 3.3])
+    a, b, n =5, 10, 8
+    vmax = a/(b**n) # i.e. 5x10e-8
+    for i, itn in enumerate(['task mice\nbefore learning', 'task mice\nafter learning', 'unsupervised\nbefore learning', 'unsupervised\nafter learning']):
+        distribution_map(ax_rew_dist[i], dat['img'][i]['img'], dat['outlines'], cmp=dat['hotcmp'], vmax=vmax, scalbar=0)
+        ax_rew_dist[i].text(0.35, 0.85, itn, transform=ax_rew_dist[i].transAxes)
 
-    ########## projection along coding direction in test2  #################
-    x,y, dx,dy, w,h =0.315,0.44, 0.09,0.083, 0.075,0.06
+    ################# distribution summary  ######################
+    x,y, dx,dy, w,h =0.42,0.345, 0.1,0.1, 0.14,0.30
+    ax_frac=fig.add_axes([x,y,w,h])
+    plot_rewPred_neu_frac(ax_frac, root, xlm=[2.9, 3.6])
+#     ax_frac.text(0.4, 0.98, 'aHV', transform=ax_frac.transAxes)
+    utils.fmt(ax_frac, xtick=[[3, 3.5], ['before\nlearning', 'after\nlearning']])
 
-    V1_ax = [fig.add_axes([x, y+2*dy, w, h]), fig.add_axes([x, y+dy, w, h]), fig.add_axes([x, y, w, h])]
-    mHV_ax = [fig.add_axes([x+dx, y+2*dy, w, h]), fig.add_axes([x+dx, y+dy, w, h]), fig.add_axes([x+dx, y, w, h])]
+    x,y, dx,dy, w,h =0.62,0.365, 0.095,0.16, 0.075,0.1
+    # example reward prediciton neuron, test1
+    axs = [fig.add_axes([x, y+dy, w, h]), fig.add_axes([x+dx, y+dy, w, h]), fig.add_axes([x+dx*2, y+dy, w, h]), fig.add_axes([x+dx*3 ,y+dy, w, h])]
+    example_rewPred_resp_test1(axs, root, nneu=9)
 
-    fns = [r'process_data\naive_test2_coding_direction.npy',
-          r'process_data\unsup_test2_coding_direction.npy',
-          r'process_data\sup_test2_coding_direction.npy']
-    mnames = ['TX124', 'TX123', 'TX108']
-    for i in range(3):
-        isxn = 1 if i==2 else 0
-        leaf3_coding_direction(V1_ax[i], root, fns[i], mnames[i], 'V1', isxn=isxn)
-        leaf3_coding_direction(mHV_ax[i], root, fns[i], mnames[i], 'mHV', isyn=0)
+    # example mouse, test1
+    axs = [fig.add_axes([x,y,w,h]), fig.add_axes([x+dx,y,w,h]), fig.add_axes([x+dx*2,y,w,h]), fig.add_axes([x+dx*3,y,w,h])]
+    test1_rewPred_resp(axs, dat['RewResp_test1']['VR2'])
 
-    ################## SI for leaf3  ######################
-    x,y, dx,dy, w,h =0.53,0.44, 0.11,0.115, 0.25,0.22
-    ax_SI_leaf3 = fig.add_axes([x,y,w,h])     
-    SI_test2(ax_SI_leaf3, root)
-    ax_SI_leaf3.text(1, 0.26, 'naive', color='k', transform=ax_SI_leaf3.transAxes) 
-    ax_SI_leaf3.text(1, 0.19, 'unsup_grat', color='0.5', transform=ax_SI_leaf3.transAxes)     
-    ax_SI_leaf3.text(1, 0.12, 'unsupervised', color=[0.46,0,0.23], transform=ax_SI_leaf3.transAxes)
-    ax_SI_leaf3.text(1, 0.05, 'task mice', color='g', transform=ax_SI_leaf3.transAxes)     
+    # example mouse, test2  
+    x,y, dx,dy, w,h =0.62,0.03, 0.095,0.16, 0.075,0.1
+    axs = [fig.add_axes([x, y+dy, w, h]), fig.add_axes([x+dx, y+dy, w, h]), fig.add_axes([x+dx*2, y+dy, w, h]), fig.add_axes([x+dx*3 ,y+dy, w, h])]
+    test2_rewPred_resp(axs, dat['RewResp_test2']['VR2'])
 
-    ################ swap sequences in mHV   ##############
-    x,y, dx,dy, w,h =0.42,0.15, 0.08,0.08, 0.067,0.06
+    # example mouse, test3  
+    axs = [fig.add_axes([x, y, w, h]), fig.add_axes([x+dx, y, w, h]), fig.add_axes([x+dx*2, y, w, h]), fig.add_axes([x+dx*3 ,y, w, h])]
+    test3_rewPred_resp(axs, dat['RewResp_test3']['VR2_swap1'])
 
-    naive = [fig.add_axes([x, y+2*dy, w, h]), fig.add_axes([x+dx, y+2*dy, w, h]), fig.add_axes([x+2.6*dx, y+2*dy, w, h])]
-    test3_sort_spk_plot(naive, dat['sort_spk'][0], mname='TX119_1', arname='mHV', vmax = 1, isxn=0, istn=1, yn='naive')
+    # value aligned to cue, test1 
+    x,y, dx,dy, w,h =0.02,0.03, 0.12,0.12, 0.105,0.23
+    ax_val2cue=fig.add_axes([x,y,w,h])
+    plot_rewResp_2_Cue(ax_val2cue, dat['RewResp_test1'])
 
-    unsup = [fig.add_axes([x, y+dy, w, h]), fig.add_axes([x+dx, y+dy, w, h]), fig.add_axes([x+2.6*dx, y+dy, w, h])]
-    test3_sort_spk_plot(unsup, dat['sort_spk'][1], mname='TX88_1', arname='mHV', vmax = 1, isxn=0, istn=0, yn='unsupervised')
+    # value aligned to first lick, test1  
+    x,y, dx,dy, w,h =0.18,0.03, 0.12,0.12, 0.105,0.23
+    ax_spk2FL=fig.add_axes([x, y, w, h])
+    plot_rewResp_2_firstLick(ax_spk2FL, dat['RewResp_test1'])
 
-    sup = [fig.add_axes([x, y, w, h]), fig.add_axes([x+dx, y, w, h]), fig.add_axes([x+2.6*dx, y, w, h])]
-    test3_sort_spk_plot(sup, dat['sort_spk'][2], mname='TX108', arname='mHV', vmax = 1, isxn=1, istn=0, yn='supervised')
+    # value vs beh, test1
+    x,y, dx,dy, w,h =0.35,0.03, 0.14,0.12, 0.09,0.23
+    ax_val2beh=fig.add_axes([x,y,w,h])
+    plot_rewResp_in_leaf2(ax_val2beh, dat['RewResp_test1'])
 
-    ################## coeficient  ######################
-    x,y, dx,dy, w,h =0.75,0.15, 0.11,0.11, 0.25,0.22
-    ax_coef = fig.add_axes([x,y,w,h])
-    test3_seq_corr_all_areas(ax_coef, dat['sort_spk'])    
-    ax_coef.text(0.75, 0.12, 'naive', color='k', transform=ax_coef.transAxes)     
-    ax_coef.text(0.75, 0.07, 'unsupervised', color=[0.46,0,0.23], transform=ax_coef.transAxes)
-    ax_coef.text(0.75, 0.02, 'task mice', color='g', transform=ax_coef.transAxes)  
+    # stim vs beh, test1
+    ax_stim2beh=fig.add_axes([x+dx,y,w,h],rasterized=True)
+    plot_stimResp_in_leaf2(ax_stim2beh, dat['RewResp_test1'])  
     
-    ax_text.text(0.125, 0.99, r'$\bf{a}$ Licking behavior in $test2$', fontsize=5.5)
-    ax_text.text(0.3, 0.99, r"$\bf{b}$ Example coding direction of leaf1-leaf2", fontsize=5.5)
-    ax_text.text(0.52, 0.99, r"$\bf{c}$ Similarity index for leaf3 and circle1", fontsize=5.5)
+    ax_text.text(0.01, 0.65, r"$\bf{a}$ Distribution of reward-prediction neurons ($d'_{late\ vs.\ early}$ $\geq$ 0.3)", fontsize=5.5)
+    ax_text.text(0.385, 0.65, r"$\bf{b}$ Summary of changes in anterior areas", fontsize=5.5)
+    ax_text.text(0.605, 0.65, r"$\bf{c}$ Example reward-prediction activity (anterior, $test1$)", fontsize=5.5)
 
-    ax_text.text(.215, .475, r"$\bf{d}$ Licking behavior in $test3$", fontsize=5.5)
-    ax_text.text(0.405, 0.475, r"$\bf{e}$ Example leaf1-selective neurons (medial, leaf1 $vs$ circle1)", fontsize=5.5) 
+    ax_text.text(.74, .622, r"activity of example neuron", fontsize=5.5)
+    ax_text.text(0.72, 0.452, r"average activity across neurons", fontsize=5.5) 
     
 
-    ax_text.text(.72, .475, r"$\bf{f}$ Sequence similarity", fontsize=5.5)
-     
+    ax_text.text(0, .25, r"$\bf{d}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(0, .23, r"aligned to sound cue (in leaf1)", fontsize=5.5)
+    ax_text.text(.16, .25, r"$\bf{e}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(.16, .23, r"aligned to first lick (in leaf1)", fontsize=5.5)
+    ax_text.text(.315, .25, r"$\bf{f}$ Reward-prediction neurons,", fontsize=5.5)
+    ax_text.text(.315, .23, r"(anterior in leaf2)", fontsize=5.5)
+    ax_text.text(.465, .25, r"$\bf{g}$ leaf1-selective neurons,", fontsize=5.5)
+    ax_text.text(.465, .23, r"(medial in leaf2)", fontsize=5.5)
+    
+    ax_text.text(.605, .265, r"$\bf{g}$ Example average reward-prediction activity (anterior, $test2$)", fontsize=5.5)
+    ax_text.text(.605, .095, r"$\bf{g}$ Example average reward-prediction activity (anterior, $test3$)", fontsize=5.5)
+    
+def make_hot_cmap():
+    new_hot = cm.get_cmap('magma_r', 256)
+    newcolors = new_hot(np.linspace(0, 1, 256))
+    noCol = np.array([0, 0, 0, 1])
+    return ListedColormap(newcolors[:,:]) 
 
-def leaf3_coding_direction(ax, root, fn, mname, arn, isxn=0, isyn=1):
-    dat = np.load(os.path.join(root, fn), allow_pickle=1).item()
-    resp1 = dat['proj_2_stim1'][mname][arn]
-    resp2 = dat['proj_2_stim2'][mname][arn]   
-    cols = ['r', 'b', 'c', [0.27,0.51,0.71]]
-    ax.axvline(50, linestyle='--', color='k', linewidth=0.3)
-    ax.axhline(0, linestyle=':', color='k', linewidth=0.3)    
-    for s,sid in enumerate([0, 2, 3, 4]):
-        diff = resp1[sid]-resp2[sid]
-        ax.plot(diff.T, color=cols[s], lw=0.5, alpha=0.05)
-        u,sem = diff.mean(0), diff.std(0, ddof=1)/np.sqrt(diff.shape[0])
-        ax.plot(u, lw=0.5, color=cols[s])
-        ax.fill_between(np.arange(len(u)), u-sem, u+sem, color=cols[s], alpha=0.3)  # Shaded STD area 
-        yn = 'projection (a.u.)' if isyn else ''
-        xn = 'position (m)' if isxn else ''
-        utils.fmt(ax, xlm=[dat['pos_from_prev'], dat['pos_from_prev']+60], 
-                  xtick=[[10, 30, 50, 70], [0, 2, 4, 6]], ytick=[[-1, 0, 1]], ylm=[-1.5, 1.5],
-                 xlabel=xn, ylabel=yn, ypad=-2) 
+def distribution_map(ax, img, outlines, scal=10, cmp='', vmax=0.6, hlw = 2, alpha=0.4, scalbar=0):
+    sz = img.shape[0]
+    ax.imshow(np.flipud(img), cmap=cmp, vmax=vmax, extent=[0, sz*scal, 0, sz*scal], rasterized=True)
+    temp_outline=[]
+    for j in range(10):
+        if j!=7:
+            temp = outlines[j].copy()
+            temp[:,1] = -(-temp[:,1]+800-2500)+2500
+            temp[:,0] = temp[:,0]+800
+            ax.plot(temp[:,1],temp[:,0],linewidth=0.5,color='k',alpha=alpha)  
+            temp_outline.append(temp)
+        else:
+            temp_outline.append([])
+    if scalbar:
+        ax.plot([450,1450],[880,880],'k-',lw=1)      
         
-def test2_perf_plot(ax, perf, title='', yn=1, xlm=[-0.3, 1.3]):
-    r = perf['u_sem']
-    SID = [0, 3, 2, 1] # xpos for circle1, leaf3, leaf2, leaf1
-    u, sem = r[:, SID, 0].mean(0), r[:, SID, 0].std(0, ddof=1)/np.sqrt(r.shape[0])
-    ax.plot(np.arange(4), r[:, SID, 0].T, 'k-', lw=0.5, alpha=0.3)
-    ax.plot(np.arange(4), u, 'k-', lw=2)
-    cols = np.array(['r', [0.27,0.51,0.71], 'c', 'b'], object)
+    ax.axis('off')
+    utils.fmt(ax, y_invert=0, xlm=[200,4500], ylm=[500,4800],axis_off='off', aspect='equal') 
+    
+def plot_frac(ax, frac1, frac2, col='k', alpha=0.3, mk='s',lw0=0.7, lw1=2, elw=2, fs=None, mks=5,ylm=[-0.001,0.46]):
+    frac = np.array([frac1, frac2])
     for i in range(4):
-        ax.errorbar(i, u[i], yerr=sem[i], marker='s', markersize=3.5, color=cols[i], markeredgecolor='k', markeredgewidth=0.5)
-    yln = 'anticipatory licking (%trials)' 
-    utils.fmt(ax, xtick=[np.arange(len(perf['stimuli'])), perf['stimuli'][SID]], ytick=[[0, 0.5, 1], [0, 50, 100]],
-          ylabel=yln, title=title, xlm=xlm, ylm=[0, 1])
-    xticklabels = ax.get_xticklabels()    
-    for label, color in zip(xticklabels, cols):
-        label.set_color(color)  
+        x = np.array([0, 0.5]) + i
+        ax.plot(x, frac[:, i, :], color=col, alpha=alpha, lw=lw0)
+    u, sem = frac.mean(2), frac.std(2, ddof=1)/np.sqrt(frac.shape[2])
+    ax.plot([np.arange(4), np.arange(4)+0.5], u, color=col, lw=lw1)
+    ax.errorbar(np.arange(4), u[0, :], yerr=sem[0, :], marker='s', markersize=3, color=col, ls='None')
+    ax.errorbar(np.arange(4)+0.5, u[1, :], yerr=sem[1, :], marker='s', markersize=3, color=col, ls='None')  
+    utils.fmt(ax, ylm=[0, 0.25], xtick=[np.arange(8)/2, ['before\nlearning', 'after\nlearning', None, None, None, None, None, None]],
+             ylabel=r"% neurons with $d'_{late vs. early} \geq 0.3$", ytick=[[0, 0.1, 0.2], [0, 10, 20]])
+    
+def plot_rewPred_neu_frac(ax, root, xlm=[]):
+    # load reward neurons fractions
+    fn0='sup_train1_before_learning_rew_frac.npy'
+    fn1='sup_train1_after_learning_rew_frac.npy'
+    fn2='unsup_train1_before_learning_rew_frac.npy'
+    fn3='unsup_train1_after_learning_rew_frac.npy'    
+    sup_rew_bef = np.load(os.path.join(root, 'process_data', fn0), allow_pickle=1).item()
+    sup_rew_aft = np.load(os.path.join(root, 'process_data', fn1), allow_pickle=1).item()
+    unsup_rew_bef = np.load(os.path.join(root, 'process_data', fn2), allow_pickle=1).item()
+    unsup_rew_aft = np.load(os.path.join(root, 'process_data', fn3), allow_pickle=1).item()  
+    plot_frac(ax, sup_rew_bef['value'], sup_rew_aft['value'], col='g')
+    plot_frac(ax, unsup_rew_bef['value'], unsup_rew_aft['value'], col=[0.46, 0, 0.23])
+    utils.fmt(ax, ylm=[0, 0.12], xlm=xlm)   
+    
+def example_rewPred_resp_test1(ax, root, vmin=0, vmax = 0.5, ms=1.5, nneu=9):
+    dat = np.load(os.path.join(root, 'process_data', 'Example_reward_neurons_in_sup_test1.npy'), allow_pickle=1).item()
+    resp = dat['Example_reward_neurons_VR2_2021_04_11_1']['resp'][nneu]
+    beh = dat['Example_reward_neurons_VR2_2021_04_11_1']['beh']
+    CuePos = np.mod(beh['SoundDelPos'], 60)
+    RewPos = beh['RewPos']
+    uniqW, WallN, stim_id = beh['UniqWalls'], beh['WallName'], beh['stim_id']
+    stimN = ['circle1', 'circle2', 'leaf2', 'leaf1']
+    cols = ['r', 'm', 'c', 'b']
+    for i, sid in enumerate([0, 1, 3, 2]):
+        stim  = WallN==uniqW[stim_id==sid]
+        s_cue = CuePos[stim]
+        sort = np.argsort(s_cue)
+        ax[i].imshow(resp[stim][sort], cmap='gray_r', vmin=vmin, vmax=vmax)
+        ax[i].plot(s_cue[sort], np.arange(stim.sum()),  marker='.', color='purple', ms=ms, linestyle='None', markeredgewidth=0)
+        ax[i].axvline(40, linewidth=0.5, linestyle='--',color='k')
+        utils.fmt(ax[i], xtick=[[0,20,40,60],[0,2,4,6]], ytick=[[0, stim.sum()]], xlabel='pos. in %s'%(stimN[i])) 
         
-def test3_perf_plot(ax, perf, title='', yn=1, xlm=[-0.3, 1.3]):
-    r = perf['u_sem']
-    SID = [0, 3, 2, 1] # xpos for circle1, leaf3, leaf2, leaf1
-    u, sem = r[:, SID, 0].mean(0), r[:, SID, 0].std(0, ddof=1)/np.sqrt(r.shape[0])
-    ax.plot(np.arange(4), r[:, SID, 0].T, 'k-', lw=0.5, alpha=0.3)
-    ax.plot(np.arange(4), u, 'k-', lw=2)
-    cols = np.array(['r',  'c', [0,0.47,0.47], 'b'], object)
-    for i in range(4):
-        ax.errorbar(i, u[i], yerr=sem[i], marker='s', markersize=3.5, color=cols[i], markeredgecolor='k', markeredgewidth=0.5)
-    yln = 'anticipatory licking (%trials)' 
-    utils.fmt(ax, xtick=[np.arange(len(perf['stimuli'])), perf['stimuli'][SID]], ytick=[[0, 0.5, 1], [0, 50, 100]],
-          ylabel=yln, title=title, xlm=xlm, ylm=[0, 1])
-    xticklabels = ax.get_xticklabels()    
-    for label, color in zip(xticklabels, cols):
-        label.set_color(color)          
+def test1_rewPred_resp(ax, dat, vmin=0, vmax = 0.5, ms=1.5):
+    CuePos = np.mod(dat['beh']['SoundDelPos'], 60)
+    RewPos = dat['beh']['RewPos']
+    uniqW, WallN, stim_id = dat['beh']['UniqWalls'], dat['beh']['WallName'], dat['beh']['stim_id']
+    stimN = ['circle1', 'circle2', 'leaf2', 'leaf1']
+    cols = ['r', 'm', 'c', 'b']
+    for i, sid in enumerate([0, 1, 3, 2]):
+        stim  = WallN==uniqW[stim_id==sid]
+        s_cue = CuePos[stim]
+        sort = np.argsort(s_cue)
+        ax[i].imshow(dat['resp'][stim][sort], cmap='gray_r', vmin=vmin, vmax=vmax)
+        ax[i].plot(s_cue[sort], np.arange(stim.sum()),  marker='.', color='purple', ms=ms, linestyle='None', markeredgewidth=0)
+        ax[i].axvline(40, linewidth=0.5, linestyle='--',color='k')
+        utils.fmt(ax[i], xtick=[[0,20,40,60],[0,2,4,6]], ytick=[[0, stim.sum()]], xlabel='pos. in %s'%(stimN[i])) 
         
-def SI_test2(ax, root):
-    fns = ['naive_test2_coding_direction.npy', 'sup_test2_coding_direction.npy', 'unsup_test2_coding_direction.npy', 'test2_after_grating_coding_direction.npy']
-    cols = ['k', 'g', [0.46,0, 0.23], "0.5"]
-    for f,fn in enumerate(fns):
-        cd_proj_u = utils.load_coding_direction(os.path.join(root, 'process_data'), fn)['proj_tr_mean'][:, :, [2, 3, 0, 4]] # take medial area
-        dx = abs(cd_proj_u[:, :, 2:]-cd_proj_u[:, :, 1:2])
-        dy = abs(cd_proj_u[:, :, 2:]-cd_proj_u[:, :, 0:1])
-        dxy = abs(cd_proj_u[:, :, :1]-cd_proj_u[:, :, 1:2])
-        SI = (dx-dy) / dxy
-        SI = SI.astype(float)
-        u, sem = np.nanmean(SI, 0), np.nanstd(SI, 0, ddof=1)/np.sqrt(SI.shape[0])
-        for a in range(4):
-            ax.plot(np.array([0, 0.5])+a, u[a], lw=1.2, color=cols[f])
-            ax.errorbar(np.array([0, 0.5])+a, u[a], yerr=sem[a], marker='s', markersize=3, color=cols[f], markeredgecolor='k', markeredgewidth=0.5, elinewidth=1)
-    yn = 'similarity index ($SI$)'
-    utils.fmt(ax, xtick=[[0, 0.5], ['circle2', 'leaf3']], ylabel=yn, ytick=[[-1, 0, 1]], ypad=0)   
-    ax.axhline(0, linewidth=0.5, linestyle='--', color='k')
-    xticklabels = ax.get_xticklabels()    
-    for label, color in zip(xticklabels, ['r', [0.27,0.51,0.71]]):
-        label.set_color(color)    
-    for t,txt in enumerate(['V1', 'mHV', 'lHV', 'aHV']):
-        ax.text(0.1 + 0.25*t, 0.98, txt, transform=ax.transAxes)
+def test2_rewPred_resp(ax, dat, vmin=0, vmax = 0.5, ms=1.5):
+    CuePos = np.mod(dat['beh']['SoundDelPos'], 60)
+    RewPos = dat['beh']['RewPos']
+    uniqW, WallN, stim_id = dat['beh']['UniqWalls'], dat['beh']['WallName'], dat['beh']['stim_id']
+    stimN = ['circle1', 'leaf3', 'leaf2', 'leaf1']
+    cols = ['r', [0.27,0.51,0.71], 'c', 'b']
+    for i, sid in enumerate([0, 4, 3, 2]):
+        stim  = WallN==uniqW[stim_id==sid]
+        s_cue = CuePos[stim]
+        sort = np.argsort(s_cue)
+        ax[i].imshow(dat['resp'][stim][sort], cmap='gray_r', vmin=vmin, vmax=vmax)
+        ax[i].plot(s_cue[sort], np.arange(stim.sum()),  marker='.', color='purple', ms=ms, linestyle='None', markeredgewidth=0)
+        ax[i].axvline(40, linewidth=0.5, linestyle='--',color='k')
+        utils.fmt(ax[i], xtick=[[0,20,40,60],[0,2,4,6]], ytick=[[0, stim.sum()]], xlabel='pos. in %s'%(stimN[i]))  
         
-def test3_sort_spk_plot(ax, dat, mname='', arname='', vmax = 1, isxn=1, istn=1, yn=''):
-    seq_spk = dat['spk_sort'][mname][arname]['sorted_by_odd_%s'%('leaf1')]['target']
-    leaf1 = seq_spk[2]
-    leaf1_swap = seq_spk[6]
-    leaf1_swap_unswap = leaf1_swap.copy()
-    leaf1_swap_unswap[:, :20] = leaf1_swap[:, 20:40]
-    leaf1_swap_unswap[:, 20:40] = leaf1_swap[:, :20]
-    spks = [leaf1, leaf1_swap, leaf1_swap_unswap]
-    xns = ['pos. in leaf1 (m)', 'pos. in\nleaf1_swap', 'corresponding\npos. in leaf1']
-    tns = ['leaf1', 'leaf1_swap', 'leaf1_swap\nunswapped']
-    tcols = ['b', [0,0.47,0.47], 'k']
-    for i in range(3):
-        ax[i].imshow(spks[i], vmin=0, vmax=vmax, cmap='gray_r')
-        ax[i].axvline(40, linestyle='--', lw=0.5, color='k')   
-        xn = xns[i] if isxn else ''
-        tn = tns[i] if istn else ''
-        yn1 = yn if i!=1 else ''
-        utils.fmt(ax[i], title=tn, tcolor=tcols[i], y_invert=1, xlabel=xn, tpad=0, xpad=-1,
-                 xtick=[[0, 20, 40, 60], [0, 2, 4, 6]], ytick=[[]], ylabel=yn1, ypad=3) 
+def test3_rewPred_resp(ax, dat, vmin=0, vmax = 0.5, ms=1.5):
+    CuePos = np.mod(dat['beh']['SoundDelPos'], 60)
+    RewPos = stats.zscore(dat['beh']['RewPos'])
+    uniqW, WallN, stim_id = dat['beh']['UniqWalls'], dat['beh']['WallName'], dat['beh']['stim_id']
+    stimN = ['circle1', 'leaf1_swap', 'leaf2', 'leaf1']
+    cols = ['r', [0,0.47,0.47], 'c', 'b']
+    for i, sid in enumerate([0, 5, 3, 2]): # leaf1_swap index: 5 or 6 
+        stim  = WallN==uniqW[stim_id==sid]
+        s_cue = CuePos[stim]
+        sort = np.argsort(s_cue)
+        ax[i].imshow(dat['resp'][stim][sort], cmap='gray_r', vmin=vmin, vmax=vmax)
+        ax[i].plot(s_cue[sort], np.arange(stim.sum()),  marker='.', color='purple', ms=ms, linestyle='None', markeredgewidth=0)
+        ax[i].axvline(40, linewidth=0.5, linestyle='--',color='k')
+        utils.fmt(ax[i], xtick=[[0,20,40,60],[0,2,4,6]], ytick=[[0, stim.sum()]], xlabel='pos. in %s'%(stimN[i]))         
         
-def test3_seq_corr_all_areas(ax, dat):
-    cols = ['k', [0.46,0, 0.23], 'g']
-    u, sem = np.empty((3, 4, 2)), np.empty((3, 4, 2))
-    for i in range(3): 
-        r = utils.get_swap_seq_corr(dat[i], stim_sort='leaf1')
-        u[i] = r.mean(0)
-        sem[i] = r.std(0, ddof=1)/np.sqrt(r.shape[0])
-    for i,icol in enumerate(cols):  
-        for a in range(4):
-            ax.plot(np.array([0.5, 0])+a, u[i, a], color=cols[i], lw=1)
-            ax.errorbar(np.array([0.5, 0])+a, u[i, a], yerr=sem[i, a], marker='s', markersize=3, color=cols[i], markeredgecolor='k', markeredgewidth=0.5)
-    yn = 'correlation with leaf1-sequence (odd trials)'
-    utils.fmt(ax, xtick=[np.arange(8)/2, ['leaf1_swap', 'leaf1_swap\nunswapped', None, None, None, None, None, None]], 
-              xrot=90, ylabel=yn, ytick=[[0, 0.5, 1]], ylm=[-0.35,1])    
-    xticklabels = ax.get_xticklabels()    
-    for label, color in zip(xticklabels, [[0,0.47,0.47], 'k']):
-        label.set_color(color)          
-    for t,txt in enumerate(['V1', 'mHV', 'lHV', 'aHV']):
-        ax.text(0.1 + 0.25*t, 0.98, txt, transform=ax.transAxes) 
-    ax.axhline(0, linestyle=':', color='k', lw=0.5)       
+def plot_rewResp_2_firstLick(ax, dat):
+    u_spk, u_lick = [], []
+    for kn in dat:
+        beh = dat[kn]['beh']
+        stim_id, WallN, uniqWN = beh['stim_id'], beh['WallName'], beh['UniqWalls']
+        rewStim = WallN==uniqWN[stim_id==2]
+
+        late_FL = dat[kn]['FL_pos']>=20
+        resp2FL = dat[kn]['resp2FL'][rewStim & late_FL]
+        lick2FL = dat[kn]['lick2FL'][rewStim & late_FL]
+        if resp2FL.shape[0]>10:
+#             print(resp2FL.shape)
+            resp2FL = (resp2FL - resp2FL.mean()) / resp2FL.std()
+            u_spk.append(resp2FL.mean(0))
+            u_lick.append(lick2FL.mean(0)  * 3)
+    u_spk = np.array(u_spk)
+    u_lick = np.array(u_lick)
+    u0, sem0 = u_spk.mean(0), u_spk.std(0, ddof=1)/np.sqrt(u_spk.shape[0])
+    u1, sem1 = u_lick.mean(0), u_lick.std(0, ddof=1)/np.sqrt(u_lick.shape[0])    
+    ax.plot(u0, color='b', lw=1)
+    ax.fill_between(np.arange(len(u0)), u0-sem0, u0+sem0, color='b', alpha=0.3, edgecolor='None')
+    ax2 = ax.twinx()
+    ax2.plot(u1, color='0.5', lw=1)
+    ax2.fill_between(np.arange(len(u1)), u1-sem1, u1+sem1, color='0.5', alpha=0.3, edgecolor='None')
+    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.8, 1.3], ytick=[[0, 1, 2]], xlabel='time to first lick (s)',
+              xtick=[np.linspace(0,30,11)[1::2]-0.5,np.linspace(0,10,11)[1::2].astype(int)-5], xlm=[-0.5, len(u0)-0.5])
+    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0, ylm=[-0.2, 4.5])
+    ax.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)    
+    
+def plot_rewResp_2_Cue(ax, dat):
+    u_spk, u_lick = [], []
+    for kn in dat:
+        beh = dat[kn]['beh']
+        stim_id, WallN, uniqWN = beh['stim_id'], beh['WallName'], beh['UniqWalls']
+        rewStim = WallN==uniqWN[stim_id==2]
+        resp2Cue = dat[kn]['resp2Cue'][rewStim]
+        lick2Cue = dat[kn]['lick2Cue'][rewStim]
         
+        resp2Cue = (resp2Cue - np.nanmean(resp2Cue)) / np.nanstd(resp2Cue)
+        u_spk.append(np.nanmean(resp2Cue, 0))
+        u_lick.append(lick2Cue.mean(0) * 3) # recording frame rate is 3 Hz,
         
+    u_spk = np.array(u_spk)
+    u_lick = np.array(u_lick)
+    u0, sem0 = np.nanmean(u_spk, 0), np.nanstd(u_spk, 0, ddof=1)/np.sqrt(u_spk.shape[0])
+    u1, sem1 = u_lick.mean(0), u_lick.std(0, ddof=1)/np.sqrt(u_lick.shape[0])    
+    ax.plot(u0, color='b', lw=1)
+    ax.fill_between(np.arange(len(u0)), u0-sem0, u0+sem0, color='b', alpha=0.3, edgecolor='None')
+    ax.axvline(15-0.5, linewidth=0.5, linestyle=':', color='0.5')
+    ax2 = ax.twinx()
+    ax2.plot(u1, color='0.5', lw=1)
+    ax2.fill_between(np.arange(len(u1)), u1-sem1, u1+sem1, color='0.5', alpha=0.3, edgecolor='None')
+    utils.fmt(ax, ylabel='average activity (zscore)', boxoff=0, ylm=[-0.7,2], xlabel='time to cue (s)', 
+              xtick=[np.linspace(0,30,11)[1::2]-0.5,np.linspace(0,10,11)[1::2].astype(int)-5], xlm=[-0.5, len(u0)-0.5])
+    utils.fmt(ax2, ylabel='lick rate (counts/s)', boxoff=0, ylm=[-0.3, 3.7])
+    ax.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)        
+    
+def plot_rewResp_in_leaf2(ax, dat):
+    u_spk, u_lick = [], []
+    for kn in dat:
+        beh = dat[kn]['beh']
+        stim_id, WallN, uniqWN = beh['stim_id'], beh['WallName'], beh['UniqWalls']
+        rewStim = WallN==uniqWN[stim_id==3]
+        islick = utils.lickCount(dat[kn]['beh'], def_range=[0, 40])['inRange'][rewStim]
+        if (len(islick)-islick.sum())>=5:
+            resp = dat[kn]['resp'][rewStim][:, 0:40].mean(1)
+            u_spk.append([resp[~islick].mean(0), resp[islick].mean(0)])
+    u_spk = np.array(u_spk)
+    u, sem = u_spk.mean(0), u_spk.std(0, ddof=1)/np.sqrt(u_spk.shape[0])
+    ax.plot([0, 1], u_spk.T, color='c', lw=0.5, alpha=0.5)
+    ax.plot([0, 1], u, color='k', lw=1)
+    ax.errorbar([0, 1], u, sem, marker='s', color='k', markersize=3)
+    utils.fmt(ax, ylabel='activity (zscore)', ylm=[-0.1, 0.5], ytick=[[0, 0.5]],
+              xtick=[[0, 1], ['no lick\ntrials', 'lick\ntrials']], xlm=[-0.2, 1.2])    
+    
+def plot_stimResp_in_leaf2(ax, dat):
+    u_spk, u_lick = [], []
+    for kn in dat:
+        beh = dat[kn]['beh']
+        stim_id, WallN, uniqWN = beh['stim_id'], beh['WallName'], beh['UniqWalls']
+        rewStim = WallN==uniqWN[stim_id==3]
+        islick = utils.lickCount(dat[kn]['beh'], def_range=[0, 40])['inRange'][rewStim]
+        if (len(islick)-islick.sum())>=5:
+            resp = dat[kn]['stim_resp'][rewStim][:, 0:40].mean(1)
+            u_spk.append([resp[~islick].mean(0), resp[islick].mean(0)])
+    u_spk = np.array(u_spk)
+    u, sem = u_spk.mean(0), u_spk.std(0, ddof=1)/np.sqrt(u_spk.shape[0])
+    ax.plot([0, 1], u_spk.T, color='c', lw=0.5, alpha=0.5)
+    ax.plot([0, 1], u, color='k', lw=1)
+    ax.errorbar([0, 1], u, sem, marker='s', color='k', markersize=3)
+    utils.fmt(ax, ylabel='activity (zscore)', ylm=[-0.1, 0.5], ytick=[[0, 0.5]],
+              xtick=[[0, 1], ['no lick\ntrials', 'lick\ntrials']], xlm=[-0.2, 1.2])     

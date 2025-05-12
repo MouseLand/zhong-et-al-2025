@@ -5,7 +5,55 @@ import os
 from scipy import interpolate
 from scipy import stats
 import random
+import json
+import requests
+from pathlib import Path
 
+def download_data_from_figshare(root):
+    Item_ID = 28811129
+    #Set the base URL
+    BASE_URL = 'https://api.figshare.com/v2'
+
+    r = requests.get(BASE_URL + '/articles/' + str(Item_ID))
+    file_metadata = json.loads(r.text)
+    file_info = []
+    for j in file_metadata['files']: #add the item id to each file record- this is used later to name a folder to save the file to
+        j['item_id'] = Item_ID
+        file_info.append(j) #Add the file metadata to the list
+    fp1 = os.path.join(root, 'beh')
+    fp2 = os.path.join(root, 'beh', 'Unsupervised_pretraining_behavior')
+    fp3 = os.path.join(root, 'spk')
+    fp4 = os.path.join(root, 'retinotopy')
+    fp5 = os.path.join(root, 'process_data')
+    for fp in [fp1, fp2, fp3, fp4, fp5]:
+        if not os.path.isdir(fp):
+            os.makedirs(fp)
+    
+    print('Downloading...')
+    for k in file_info:
+        if k['name'].split('_')[-1] == 'data.npy':
+            fn = os.path.join(root, 'spk', k['name'])
+        elif k['name'].split('_')[-1] == 'trans.npz':
+            fn = os.path.join(root, 'retinotopy', k['name'])        
+        elif k['name'].split('_')[0] == 'Beh':
+            if 'pretrain' in k['name']:
+                fn = os.path.join(root, 'beh', 'Unsupervised_pretraining_behavior', k['name'])
+            else:
+                fn = os.path.join(root, 'beh', k['name'])
+        elif k['name'].split('_')[-1] == 'areas.npz':
+            fn = os.path.join(root, 'retinotopy', k['name'])
+        elif k['name'].split('_')[-1] == 'info.npy':
+            fn = os.path.join(root, 'beh', k['name'])  
+        elif k['name'].split('_')[-1] == 'behavior.npy':
+            fn = os.path.join(root, 'beh', k['name'])                     
+        print(fn)
+        if not os.path.exists(fn):
+            response = requests.get(BASE_URL + '/file/download/' + str(k['id']))
+            open(fn, 'wb').write(response.content)
+        print(k['name'])
+
+    print('All done. If using Colab you will find the files in the little folder icon to the left.') 
+    
 def color_codes():
     cols = {}
     cols['unsup'] = [0.46,0, 0.23]
